@@ -1,0 +1,40 @@
+worker_processes 1;
+<% if node.platform == 'freebsd' -%>
+user www;
+<% else -%>
+user www-data;
+<% end -%>
+
+events {
+  worker_connections 1024;
+  multi_accept on;
+}
+
+http {
+  include mime.types;
+  default_type application/octet-stream;
+  keepalive_timeout 70;
+  client_max_body_size 0;
+  gzip on;
+  access_log off;
+  error_log syslog:server=127.0.0.1,tag=nginx info;
+
+  map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+  }
+
+  server {
+    listen 80;
+    listen [::]:80;
+    location / {
+      root /var/www/html;
+    }
+  }
+
+<% if node.platform == 'freebsd' -%>
+  include /usr/local/etc/nginx/servers/*.conf;
+<% else -%>
+  include /etc/nginx/servers/*.conf;
+<% end -%>
+}

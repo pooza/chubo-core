@@ -1,0 +1,9 @@
+#!/bin/sh
+#
+# man-db cron weekly
+
+certbot renew
+<% if node.dig('nginx', 'enable') -%>
+systemctl restart nginx
+<% end -%>
+systemctl restart postfix

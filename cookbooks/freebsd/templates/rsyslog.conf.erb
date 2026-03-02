@@ -1,0 +1,20 @@
+module(load="imuxsock" SysSock.UseSpecialParser="off")
+module(load="imklog")
+module(load="imudp")
+$UDPServerRun 514
+
+$DirCreateMode 0750
+$DirOwner root
+$DirGroup <%= node.dig('wheel', 'group') %>
+$FileCreateMode 0640
+$FileOwner root
+$FileGroup <%= node.dig('wheel', 'group') %>
+
+*.info -/var/log/messages
+auth.info -/var/log/auth.log
+authpriv.info -/var/log/auth.log
+mail.info -/var/log/mail.log
+cron.info -/var/log/cron.log
+kern.info -/var/log/kern.log
+
+$IncludeConfig /usr/local/etc/rsyslog.d/*.conf

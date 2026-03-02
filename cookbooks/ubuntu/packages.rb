@@ -1,0 +1,15 @@
+exit unless node.platform == 'ubuntu'
+
+execute 'apt update'
+execute 'apt autoremove -y'
+
+package 'lv'
+package 'wget'
+package 'curl'
+package 'fzf'
+package 'rsync'
+package 'unzip'
+package 'net-tools'
+package 'silversearcher-ag'
+package 'language-pack-ja' if node.locale == 'ja_JP.UTF-8'
+package 'build-essential'

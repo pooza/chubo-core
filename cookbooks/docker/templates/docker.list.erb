@@ -1,0 +1,1 @@
+deb [arch=<%= node.arch %> signed-by=<%= node.dig('docker', 'keyring', 'path') %>] <%= node.dig('docker', 'source', 'url') %> <%= node.release %> stable

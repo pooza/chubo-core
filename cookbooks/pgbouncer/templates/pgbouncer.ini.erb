@@ -1,0 +1,16 @@
+[databases]
+<%= node.dig('deployer', 'user') %> = host=localhost port=5432 user=<%= node.dig('deployer', 'user') %> dbname=<%= node.dig('deployer', 'user') %>
+
+[users]
+
+[pgbouncer]
+pidfile = /var/run/pgbouncer/pgbouncer.pid
+listen_addr = *
+listen_port = 6432
+auth_type = trust
+auth_file = /usr/local/etc/pgbouncer.users
+admin_users = pgbouncer
+pool_mode = transaction
+syslog = 1
+syslog_facility = daemon
+syslog_ident = pgbouncer

@@ -1,0 +1,16 @@
+exit unless node.platform == 'freebsd'
+
+execute 'pkg update'
+
+package 'lv'
+package 'fzf'
+package 'the_silver_searcher'
+package 'wget'
+package 'gmake'
+package 'cmake'
+package 'base64'
+package 'python'
+package 'portmaster'
+package 'freebsd-snapshot'
+package 'zstd'
+package 'ca_root_nss'

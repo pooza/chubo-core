@@ -1,0 +1,4 @@
+$template nginx_uptime_kuma, "/var/log/nginx/<%= node.dig('uptime-kuma', 'host') %>/%$year%/%$month%/access_%$year%%$month%%$day%.log"
+$template raw, "%msg%\n"
+
+:programname, isequal, "nginx_uptime_kuma" -?nginx_uptime_kuma;raw

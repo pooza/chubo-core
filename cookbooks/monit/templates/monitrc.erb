@@ -1,0 +1,7 @@
+set daemon 30
+set log syslog
+set httpd port 2812
+<% node.dig('monit', 'allowed').each do |allowed| -%>
+  allow <%= allowed %>
+<% end -%>
+include /usr/local/etc/monit.d/*

@@ -1,0 +1,26 @@
+path=(
+  ~/bin
+  ~/.local/bin
+  /usr/local/bin
+  /usr/local/sbin
+  /bin
+<% if node.dig('rbenv', 'enable') -%>
+  ~/.rbenv/bin
+<% end -%>
+  /sbin
+  /usr/bin
+  /usr/libexec
+  /usr/sbin
+)
+export LANG=<%= (@user.dig('locale') || node.locale) rescue node.locale %>
+export LC_CTYPE=<%=(@user.dig('locale') || node.locale) rescue node.locale %>
+export LC_ALL=<%= (@user.dig('locale') || node.locale) rescue node.locale %>
+<% unless node.platform == 'freebsd' -%>
+export RUBY_CONFIGURE_OPTS=--with-jemalloc
+<% end -%>
+<% if node.dig('nvm', 'enable') -%>
+export NVM_DIR="$HOME/.config/nvm"
+<% end -%>
+<% if node.dig('rbenv', 'enable') -%>
+eval "$(rbenv init -)"
+<% end -%>

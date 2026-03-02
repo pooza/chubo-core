@@ -1,0 +1,15 @@
+/var/log/auth.log 640 9 * @T00 ZB
+/var/log/mail.log 640 9 * @T00 ZB
+/var/log/cron.log 640 9 * @T00 ZB
+/var/log/kern.log 640 9 * @T00 ZB
+/var/log/messages 640 2 * @T00 ZB
+
+/var/log/frequently.log 640 2 * @T00 ZBN
+/var/log/daily.log 640 7 * @T00 JZBN
+/var/log/monthly.log 640 12 * $M1D  JZBN
+/var/log/weekly.log 640 5 * $W6D0 JZBN
+/var/log/security.log 640 2 * @T00 JZBN
+/var/log/utx.log 644 3 * @01T05 B
+
+<include> /etc/newsyslog.conf.d/[!.]*.conf
+<include> /usr/local/etc/newsyslog.conf.d/[!.]*.conf

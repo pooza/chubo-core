@@ -1,0 +1,11 @@
+KeyPrint 800651ef4b4c71c27e60786d7b487188970f4b4169cc055784e21eb71d410cc5
+ServerName update.FreeBSD.org
+Components src world kernel
+IgnorePaths
+IDSIgnorePaths /usr/share/man/cat
+IDSIgnorePaths /usr/share/man/whatis
+IDSIgnorePaths /var/db/locate.database
+IDSIgnorePaths /var/log
+UpdateIfUnmodified /etc/ /var/ /root/ /.cshrc /.profile
+MergeChanges /etc/ /boot/device.hints
+CreateBootEnv no

@@ -1,0 +1,35 @@
+Port 22
+Protocol 2
+SyslogFacility AUTHPRIV
+LogLevel INFO
+
+# Authentication:
+PermitRootLogin no
+StrictModes yes
+AllowGroups <%= node.dig('wheel', 'group') %> <%= node.dig('sudo', 'group') %>
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+HostbasedAuthentication no
+PermitEmptyPasswords no
+PasswordAuthentication no
+ChallengeResponseAuthentication no
+KerberosAuthentication no
+UsePAM no
+
+AllowAgentForwarding yes
+AllowTcpForwarding yes
+X11Forwarding no
+PrintMotd yes
+UseDNS no
+
+Subsystem sftp /usr/libexec/sftp-server -u 002 -l ERROR
+
+# Explicit host key files
+HostKey /etc/ssh/ssh_host_ed25519_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_rsa_key
+
+# Key exchange and authentication algorithms for compatibility
+KexAlgorithms curve25519-sha256@libssh.org,ecdh-sha2-nistp256
+HostKeyAlgorithms ssh-ed25519,ssh-rsa
+PubkeyAcceptedAlgorithms ssh-ed25519,ssh-rsa

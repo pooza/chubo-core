@@ -1,0 +1,10 @@
+# /etc/crontab: system-wide crontab
+
+SHELL=/bin/sh
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
+CRON=1
+
+<%= rand(0..59) %> * * * * root cd / && run-parts /etc/cron.hourly > /dev/null
+<%= rand(0..59) %> 6 * * * root test -x /usr/sbin/anacron || ( cd / && run-parts /etc/cron.daily > /dev/null )
+<%= rand(0..59) %> 6 * * 7 root test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.weekly )
+<%= rand(0..59) %> 6 1 * * root test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.monthly )

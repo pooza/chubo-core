@@ -1,0 +1,42 @@
+/var/log/wtmp {
+  missingok
+  monthly
+  create 0664 root utmp
+  rotate 1
+}
+
+/var/log/btmp {
+  missingok
+  monthly
+  create 0660 root utmp
+  rotate 1
+}
+
+/var/log/messages {
+  rotate 2
+  create 640 root <%= node.dig('wheel', 'group') %>
+  daily
+  missingok
+  notifempty
+  compress
+  postrotate
+    /bin/systemctl restart rsyslog
+  endscript
+}
+
+/var/log/auth.log
+/var/log/mail.log
+/var/log/cron.log
+/var/log/kern.log
+{
+  rotate 7
+  create 640 root <%= node.dig('wheel', 'group') %>
+  daily
+  missingok
+  notifempty
+  compress
+  sharedscripts
+  postrotate
+    /bin/systemctl restart rsyslog
+  endscript
+}

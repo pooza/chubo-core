@@ -1,0 +1,12 @@
+/var/log/nginx/error/*.log {
+  rotate 7
+  create 640 root <%= node.dig('wheel', 'group') %>
+  daily
+  missingok
+  notifempty
+  compress
+  sharedscripts
+  postrotate
+    /bin/systemctl restart rsyslog
+  endscript
+}

@@ -1,0 +1,3 @@
+check process redis with matching "/usr/local/bin/redis-server"
+  start program = "/usr/sbin/service redis restart" with timeout 60 seconds
+  stop program = "/usr/sbin/service redis stop"

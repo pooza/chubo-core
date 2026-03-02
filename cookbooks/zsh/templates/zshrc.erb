@@ -1,0 +1,70 @@
+<% if node.platform == 'ubuntu' -%>
+alias ls='ls -AF --color'
+alias ll='ls -l'
+<% end -%>
+<% if node.platform == 'freebsd' -%>
+alias ls='ls -AFG'
+alias ll='ls -lh'
+<% end -%>
+alias vi=vim
+alias password16='cat /dev/urandom|base64|fold -w 16|head'
+alias password10='cat /dev/urandom|base64|fold -w 10|head'
+alias randomnumber='jot -r 10 1000 9999'
+alias randomaccount='ruby -e "10.times {puts (0...2).map{(97 + rand(26)).chr}.join}"'
+alias wget='wget -4'
+alias df='df -h'
+alias rubocop='bundle exec rubocop'
+
+umask 022
+
+typeset -U path cdpath fpath manpath
+
+PROMPT='%n@%M %~ %# '
+HISTSIZE=2000
+SAVEHIST=100000
+HISTFILE=~/.zhistory
+
+export EDITOR=vim
+export PAGER=less
+export LANG=<%= (@user.dig('locale') || node.locale) rescue node.locale %>
+
+setopt AUTO_CD
+setopt AUTO_PUSHD
+setopt CHASE_DOTS
+setopt CHASE_LINKS
+setopt PUSHD_IGNORE_DUPS
+setopt LIST_ROWS_FIRST
+setopt LIST_TYPES
+setopt HIST_NO_STORE
+setopt HIST_IGNORE_DUPS
+setopt HIST_REDUCE_BLANKS
+setopt HIST_IGNORE_SPACE
+setopt INC_APPEND_HISTORY
+setopt SHARE_HISTORY
+setopt EXTENDED_GLOB
+setopt NUMERIC_GLOB_SORT
+setopt RM_STAR_SILENT
+setopt NOMATCH
+setopt NULL_GLOB
+setopt NO_CLOBBER
+setopt CORRECT_ALL
+setopt IGNORE_EOF
+setopt FLOW_CONTROL
+setopt NOTIFY
+
+function history-selection () {
+<% if node.platform == 'ubuntu' -%>
+  BUFFER=`history -n 1 | tac | awk '!a[$0]++' | fzf`
+<% end -%>
+<% if node.platform == 'freebsd' -%>
+  BUFFER=`history -n 1 | tail -r | awk '!a[$0]++' | fzf`
+<% end -%>
+  CURSOR=$#BUFFER
+  zle reset-prompt
+}
+zle -N history-selection
+bindkey '^R' history-selection
+<% if node.dig('nvm', 'enable') -%>
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+<% end -%>

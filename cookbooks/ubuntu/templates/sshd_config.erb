@@ -1,0 +1,25 @@
+Port 22
+Protocol 2
+SyslogFacility AUTHPRIV
+LogLevel INFO
+
+# Authentication:
+PermitRootLogin no
+StrictModes yes
+AllowGroups <%= node.dig('wheel', 'group') %> <%= node.dig('sudo', 'group') %>
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+HostbasedAuthentication no
+PermitEmptyPasswords no
+PasswordAuthentication no
+ChallengeResponseAuthentication no
+KerberosAuthentication no
+UsePAM no
+
+AllowAgentForwarding yes
+AllowTcpForwarding yes
+X11Forwarding no
+PrintMotd yes
+UseDNS no
+
+Subsystem sftp /usr/lib/openssh/sftp-server -u 002 -l ERROR

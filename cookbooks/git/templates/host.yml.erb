@@ -1,0 +1,4 @@
+github.com:
+  oauth_token: <%= @user.dig('gh', 'token') %>
+  git_protocol: ssh
+  user: <%= @user.dig('gh', 'user') %>

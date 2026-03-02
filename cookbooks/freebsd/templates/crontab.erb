@@ -1,0 +1,18 @@
+SHELL=/bin/sh
+PATH=/etc:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
+LANG=ja_JP.UTF-8
+LC_CTYPE=ja_JP.UTF-8
+LC_ALL=ja_JP.UTF-8
+CRON=1
+
+*/1 * * * * root /usr/libexec/atrun
+*/11 * * * * root /usr/libexec/save-entropy
+*/5 * * * * root anacron
+1,31 0-5 * * * root adjkerntz -a
+0 * * * * root newsyslog
+
+*/5 * * * * root periodic frequently
+<%= rand(0..59) %> * * * * root periodic hourly
+<%= rand(0..59) %> 3 * * * root periodic daily
+<%= rand(0..59) %> 2 * * 6 root periodic weekly
+<%= rand(0..59) %> 1 1 * * root periodic monthly

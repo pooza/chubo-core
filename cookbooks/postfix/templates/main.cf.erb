@@ -1,0 +1,15 @@
+myhostname = <%= node.nodename || node.dig('postfix', 'myhostname') %>
+inet_protocols = all
+compatibility_level = 3.6
+alias_maps = hash:<%= ::File.join(node.dig('postfix', 'dir'), 'aliases') %>
+unknown_local_recipient_reject_code = 550
+
+# SASL
+smtp_sasl_auth_enable = yes
+smtp_sasl_password_maps = hash:<%= ::File.join(node.dig('postfix', 'dir'), 'sasl/passwd') %>
+smtp_sasl_tls_security_options = noanonymous
+smtp_sasl_mechanism_filter = plain
+
+# Relay
+relayhost = [smtp.sendgrid.net]:587
+smtp_tls_security_level = may

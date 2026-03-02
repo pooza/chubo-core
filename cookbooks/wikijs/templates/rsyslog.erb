@@ -1,0 +1,4 @@
+$template nginx_wikijs, "/var/log/nginx/<%= node.dig('wikijs', 'host') %>/%$year%/%$month%/access_%$year%%$month%%$day%.log"
+$template raw, "%msg%\n"
+
+:programname, isequal, "nginx_wikijs" -?nginx_wikijs;raw

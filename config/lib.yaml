@@ -1,0 +1,9 @@
+package:
+  version: 0.1.0
+  url: https://github.com/pooza/chubo-core
+  authors:
+    - Tatsuya Koishi
+  email:
+    - tkoishi@b-shock.co.jp
+  description: chubo shared core library and cookbooks
+  license: MIT

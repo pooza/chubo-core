@@ -1,0 +1,5 @@
+<% if node.dig('rbenv', 'enable') -%>
+eval "$(rbenv init - bash)"
+<% end -%>
+export LANG=<%= node.locale %>
+export LC_ALL=<%= node.locale %>
