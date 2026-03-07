@@ -18,5 +18,6 @@ daily_backup_aliases_enable="NO"
 
 # zfs
 daily_status_zfs_enable="YES"
-snapshot_enable="YES"
-snapshot_schedule="/usr/home:0:10:0"
+daily_zfs_snapshot_enable="YES"
+daily_zfs_snapshot_pools="zroot/home"
+daily_zfs_snapshot_keep="10"
