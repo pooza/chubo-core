@@ -4,6 +4,6 @@
 
 certbot renew
 <% if node.dig('nginx', 'enable') -%>
-systemctl restart nginx
+systemctl reload nginx
 <% end -%>
 systemctl restart postfix
