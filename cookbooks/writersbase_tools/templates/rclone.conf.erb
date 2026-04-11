@@ -1,0 +1,7 @@
+<% (@remotes || {}).each do |name, conf| -%>
+[<%= name %>]
+<% (conf || {}).each do |key, value| -%>
+<%= key %> = <%= value %>
+<% end -%>
+
+<% end -%>
