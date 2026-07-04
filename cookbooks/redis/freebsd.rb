@@ -39,6 +39,7 @@ template '/usr/local/etc/monit.d/redis' do
   owner 'root'
   group node.dig('root', 'group')
   mode '0644'
+  only_if 'test -d /usr/local/etc/monit.d'
 end
 
 execute 'monit reload' do
