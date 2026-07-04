@@ -19,8 +19,11 @@ export LC_ALL=<%= (@user.dig('locale') || node.locale) rescue node.locale %>
 export RUBY_CONFIGURE_OPTS=--with-jemalloc
 <% end -%>
 <% if node.dig('nvm', 'enable') -%>
-export NVM_DIR="$HOME/.config/nvm"
+export NVM_DIR="$HOME/.nvm"
 <% end -%>
 <% if node.dig('rbenv', 'enable') -%>
+<% unless node.platform == 'freebsd' -%>
+export PATH="$HOME/.rbenv/bin:$PATH"
+<% end -%>
 eval "$(rbenv init -)"
 <% end -%>
