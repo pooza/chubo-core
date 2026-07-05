@@ -68,3 +68,12 @@ execute "rbenv global #{global} for #{deployer}" do
   user deployer
   not_if "#{env}#{rbenv} global | grep -qx #{global}"
 end
+
+# ログインシェルで rbenv を有効化する。これが無いと login shell（rc.d の
+# `bash -lc` 経由起動を含む）で shims が PATH に載らず OS 同梱 ruby に
+# フォールバックし、意図した版で起動しない。本番と同じ 2 行を冪等に追記する。
+execute "rbenv init for #{deployer} login shell" do
+  command %(printf '%s\\n' 'export PATH="$HOME/.rbenv/bin:$PATH"' 'eval "$(rbenv init - bash)"' >> #{home}/.bash_profile)
+  user deployer
+  not_if "grep -q 'rbenv init' #{home}/.bash_profile 2>/dev/null"
+end
