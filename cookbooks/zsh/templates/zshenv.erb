@@ -26,5 +26,8 @@ export NVM_DIR="$HOME/.nvm"
 <% unless node.platform == 'freebsd' -%>
 export PATH="$HOME/.rbenv/bin:$PATH"
 <% end -%>
-eval "$(rbenv init -)"
+# Ubuntu の rbenv は deploy ユーザーのホームにしか無いため、
+# 他の wheel ユーザーでは rbenv が居ない。無条件に eval すると
+# 全 zsh 起動時にエラーを吐き、itamae の stat 出力まで汚染する。
+command -v rbenv > /dev/null && eval "$(rbenv init -)"
 <% end -%>
