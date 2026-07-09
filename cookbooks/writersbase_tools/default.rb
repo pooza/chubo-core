@@ -20,13 +20,23 @@ when 'freebsd'
   newsyslog_conf = "/usr/local/etc/newsyslog.conf.d/#{package_name}.conf"
   rsyslog_service = 'rsyslogd'
   native_packages = ['mysql80-client']
-# Ubuntu 対応時は以下のようにブランチを追加する
-# when 'ubuntu'
-#   config_dir = "/etc/#{package_name}"
-#   rsyslog_conf = "/etc/rsyslog.d/#{package_name}.conf"
-#   logrotate_conf = "/etc/logrotate.d/#{package_name}"
-#   rsyslog_service = 'rsyslog'
-#   native_packages = ['default-libmysqlclient-dev']
+when 'ubuntu'
+  config_dir = "/etc/#{package_name}"
+  rsyslog_conf = "/etc/rsyslog.d/#{package_name}.conf"
+  logrotate_conf = "/etc/logrotate.d/#{package_name}"
+  rsyslog_service = 'rsyslog'
+  # bundler / ruby-dev / build-essential は root で bundle install するために要る。
+  # zstd は postgresql_dump が、libpq-dev と default-libmysqlclient-dev は
+  # pg / mysql2 gem のビルドが要求する。
+  native_packages = [
+    'build-essential',
+    'default-libmysqlclient-dev',
+    'libpq-dev',
+    'pkg-config',
+    'ruby-bundler',
+    'ruby-dev',
+    'zstd',
+  ]
 else
   exit
 end
@@ -78,6 +88,13 @@ when 'freebsd'
   end
 
   execute 'sysrc rsyslogd_enable="YES"'
+when 'ubuntu'
+  template logrotate_conf do
+    source 'templates/logrotate.erb'
+    owner 'root'
+    group root_group
+    mode '0644'
+  end
 end
 
 service rsyslog_service do

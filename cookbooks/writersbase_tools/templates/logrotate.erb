@@ -1,0 +1,11 @@
+/var/log/writersbase-tools.log {
+  rotate 9
+  daily
+  create 640 root <%= node.dig('wheel', 'group') %>
+  compress
+  missingok
+  notifempty
+  postrotate
+    systemctl kill -s HUP rsyslog
+  endscript
+}
