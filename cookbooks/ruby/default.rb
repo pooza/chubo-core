@@ -18,19 +18,31 @@ when 'freebsd'
 
   rbenv = 'rbenv'
   env = ''
+  system_openssl_check = nil
 when 'ubuntu'
   # apt に rbenv / ruby-build / rust が無いため git + rustup で用意する
   ['git', 'curl', 'build-essential', 'autoconf', 'bison', 'libssl-dev',
    'libreadline-dev', 'zlib1g-dev', 'libyaml-dev', 'libffi-dev',
-   'libgdbm-dev', 'libncurses-dev'].each do |pkg|
+   'libgdbm-dev', 'libncurses-dev', 'pkg-config'].each do |pkg|
     package pkg
   end
 
   rbenv_root = "#{home}/.rbenv"
   cargo_home = "#{home}/.cargo"
   rbenv = "#{rbenv_root}/bin/rbenv"
-  env = "RBENV_ROOT=#{rbenv_root} " \
+
+  # --with-openssl-dir=/usr で system OpenSSL に固定する。これが無いと
+  # ruby-build が「system openssl が定義の上限より新しい」と判断して OpenSSL を
+  # Ruby の prefix へ同梱ビルドしてしまい、同梱の古い libssl が先にロードされる。
+  # その状態で system の共有ライブラリ（libvips → libcurl）を dlopen すると
+  # `version OPENSSL_3.2.0 not found` で失敗する。
+  env = "RBENV_ROOT=#{rbenv_root} RUBY_CONFIGURE_OPTS=--with-openssl-dir=/usr " \
     "PATH=#{rbenv_root}/bin:#{rbenv_root}/shims:#{cargo_home}/bin:/usr/local/bin:/usr/bin:/bin "
+  # Ruby がリンクしている OpenSSL が system と一致するか。ずれていれば
+  # OpenSSL を同梱ビルドした Ruby なので作り直す。
+  ruby_openssl = "#{env}RBENV_VERSION=#{version} #{rbenv} exec " \
+    "ruby -ropenssl -e 'print OpenSSL::OPENSSL_LIBRARY_VERSION.split[1]'"
+  system_openssl_check = %(test "$(#{ruby_openssl})" = "$(openssl version | awk '{print $2}')")
 
   git rbenv_root do
     repository 'https://github.com/rbenv/rbenv.git'
@@ -57,10 +69,14 @@ end
 # Ruby ビルド。YJIT がビルドに含まれていなければ --force で作り直す。
 # RubyVM::YJIT.enabled? は「ランタイムで有効か」で既定 false のため、
 # --yjit で起動して「ビルドに含まれるか」を判定する（含まれれば冪等に skip）。
+# あわせて、過去に OpenSSL を同梱ビルドした Ruby も作り直す（上の env のコメント参照）。
+guard = "#{env}RBENV_VERSION=#{version} #{rbenv} exec ruby --yjit -e 'exit RubyVM::YJIT.enabled?'"
+guard += " && #{system_openssl_check}" if system_openssl_check
+
 execute "rbenv install #{version} for #{deployer}" do
   command "#{env}#{rbenv} install --force #{version}"
   user deployer
-  not_if "#{env}RBENV_VERSION=#{version} #{rbenv} exec ruby --yjit -e 'exit RubyVM::YJIT.enabled?'"
+  not_if guard
 end
 
 execute "rbenv global #{global} for #{deployer}" do
