@@ -18,12 +18,12 @@ when 'freebsd'
 
   rbenv = 'rbenv'
   env = ''
-  system_openssl_check = nil
+  build_opts_check = nil
 when 'ubuntu'
   # apt に rbenv / ruby-build / rust が無いため git + rustup で用意する
   ['git', 'curl', 'build-essential', 'autoconf', 'bison', 'libssl-dev',
    'libreadline-dev', 'zlib1g-dev', 'libyaml-dev', 'libffi-dev',
-   'libgdbm-dev', 'libncurses-dev', 'pkg-config'].each do |pkg|
+   'libgdbm-dev', 'libncurses-dev', 'pkg-config', 'libjemalloc-dev'].each do |pkg|
     package pkg
   end
 
@@ -31,18 +31,30 @@ when 'ubuntu'
   cargo_home = "#{home}/.cargo"
   rbenv = "#{rbenv_root}/bin/rbenv"
 
-  # --with-openssl-dir=/usr で system OpenSSL に固定する。これが無いと
-  # ruby-build が「system openssl が定義の上限より新しい」と判断して OpenSSL を
-  # Ruby の prefix へ同梱ビルドしてしまい、同梱の古い libssl が先にロードされる。
-  # その状態で system の共有ライブラリ（libvips → libcurl）を dlopen すると
-  # `version OPENSSL_3.2.0 not found` で失敗する。
-  env = "RBENV_ROOT=#{rbenv_root} RUBY_CONFIGURE_OPTS=--with-openssl-dir=/usr " \
+  # ビルドオプションは明示する。itamae は pooza の login shell 経由で sudo するため、
+  # 指定しないと zshenv の RUBY_CONFIGURE_OPTS が漏れ込み、何が効いているか読めない。
+  #
+  # --with-jemalloc: 意図した設定。Ruby 本体が jemalloc をリンクしていないと、
+  #   jemalloc をリンクした拡張（vendor/bundle の .so）を dlopen した時に
+  #   `cannot allocate memory in static TLS block` で落ちる。
+  # --with-openssl-dir=/usr: system OpenSSL に固定する。これが無いと ruby-build が
+  #   「system openssl が定義の上限より新しい」と判断して OpenSSL を Ruby の prefix へ
+  #   同梱ビルドしてしまい、同梱の古い libssl が先にロードされる。その状態で system の
+  #   共有ライブラリ（libvips → libcurl）を dlopen すると
+  #   `version OPENSSL_3.2.0 not found` で失敗する。
+  configure_opts = '--with-jemalloc --with-openssl-dir=/usr'
+  env = "RBENV_ROOT=#{rbenv_root} RUBY_CONFIGURE_OPTS='#{configure_opts}' " \
     "PATH=#{rbenv_root}/bin:#{rbenv_root}/shims:#{cargo_home}/bin:/usr/local/bin:/usr/bin:/bin "
-  # Ruby がリンクしている OpenSSL が system と一致するか。ずれていれば
-  # OpenSSL を同梱ビルドした Ruby なので作り直す。
+
+  # 既存の Ruby が上の 2 点を満たしているか。満たしていなければ作り直す。
+  # `rbenv install --force` は prefix を消さないので、同梱 openssl ディレクトリの
+  # 有無ではなく「実際に何をリンクしているか」で判定する。
   ruby_openssl = "#{env}RBENV_VERSION=#{version} #{rbenv} exec " \
     "ruby -ropenssl -e 'print OpenSSL::OPENSSL_LIBRARY_VERSION.split[1]'"
-  system_openssl_check = %(test "$(#{ruby_openssl})" = "$(openssl version | awk '{print $2}')")
+  build_opts_check = %(test "$(#{ruby_openssl})" = "$(openssl version | awk '{print $2}')")
+  jemalloc_expr = %(exit RbConfig::CONFIG["LIBS"].include?("-ljemalloc"))
+  build_opts_check +=
+    " && #{env}RBENV_VERSION=#{version} #{rbenv} exec ruby -e '#{jemalloc_expr}'"
 
   git rbenv_root do
     repository 'https://github.com/rbenv/rbenv.git'
@@ -71,7 +83,7 @@ end
 # --yjit で起動して「ビルドに含まれるか」を判定する（含まれれば冪等に skip）。
 # あわせて、過去に OpenSSL を同梱ビルドした Ruby も作り直す（上の env のコメント参照）。
 guard = "#{env}RBENV_VERSION=#{version} #{rbenv} exec ruby --yjit -e 'exit RubyVM::YJIT.enabled?'"
-guard += " && #{system_openssl_check}" if system_openssl_check
+guard += " && #{build_opts_check}" if build_opts_check
 
 execute "rbenv install #{version} for #{deployer}" do
   command "#{env}#{rbenv} install --force #{version}"
