@@ -121,8 +121,10 @@ if node.dig('writersbase_tools', 'install_periodic')
     only_if "test -f #{path}/Gemfile"
   end
 
+  # bundle exec を挟まないと、Gemfile.lock が固定する rake ではなく
+  # default gem の rake が先に activate されて Gem::LoadError になる
   execute "#{package_name} rake install" do
-    command 'rake install'
+    command 'bundle exec rake install'
     cwd path
     user 'root'
     only_if "test -f #{path}/Rakefile"
