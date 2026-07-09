@@ -20,6 +20,7 @@ export RUBY_CONFIGURE_OPTS=--with-jemalloc
 <% end -%>
 <% if node.dig('nvm', 'enable') -%>
 export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 <% end -%>
 <% if node.dig('rbenv', 'enable') -%>
 <% unless node.platform == 'freebsd' -%>
