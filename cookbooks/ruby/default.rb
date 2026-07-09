@@ -52,7 +52,8 @@ when 'ubuntu'
   ruby_openssl = "#{env}RBENV_VERSION=#{version} #{rbenv} exec " \
     "ruby -ropenssl -e 'print OpenSSL::OPENSSL_LIBRARY_VERSION.split[1]'"
   build_opts_check = %(test "$(#{ruby_openssl})" = "$(openssl version | awk '{print $2}')")
-  jemalloc_expr = %(exit RbConfig::CONFIG["LIBS"].include?("-ljemalloc"))
+  # jemalloc は LIBS ではなく MAINLIBS に載る（LIBS を見ると毎回リビルドになる）
+  jemalloc_expr = %(exit RbConfig::CONFIG["MAINLIBS"].to_s.include?("-ljemalloc"))
   build_opts_check +=
     " && #{env}RBENV_VERSION=#{version} #{rbenv} exec ruby -e '#{jemalloc_expr}'"
 
