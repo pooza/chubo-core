@@ -19,6 +19,17 @@ when 'freebsd'
   rbenv = 'rbenv'
   env = ''
   build_opts_check = nil
+
+  # pkg の openssl は OPENSSLDIR=/usr/local/openssl で、その cert.pem（CA バンドル）が
+  # 未 populate。rbenv Ruby はこの openssl にリンクするため、放置すると全 outbound TLS が
+  # `certificate verify failed (unable to get local issuer certificate)` で落ちる
+  # （本番は base openssl=/etc/ssl/cert.pem を見るので無傷＝staging 固有のギャップ）。
+  # ca_root_nss の CA バンドルへ symlink して塞ぐ。
+  package 'ca_root_nss'
+  link '/usr/local/openssl/cert.pem' do
+    to '/usr/local/share/certs/ca-root-nss.crt'
+    force true
+  end
 when 'ubuntu'
   # apt に rbenv / ruby-build / rust が無いため git + rustup で用意する
   ['git', 'curl', 'build-essential', 'autoconf', 'bison', 'libssl-dev',
