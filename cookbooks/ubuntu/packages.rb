@@ -23,11 +23,13 @@ package 'language-pack-ja' do
   only_if 'grep -q "^ID=ubuntu" /etc/os-release'
 end
 
+# locale-gen は引数付きで呼ぶ。Ubuntu は引数を /usr/share/i18n/SUPPORTED で引いて
+# locale.gen 登録＋生成する。引数なし（locale.gen 追記方式）は LXC/最小イメージで
+# 生成に至らないことがあり不可。
 locales = [node.locale, *node.dig('wheel', 'users').map {|u| node.dig('users', u, 'locale')}].compact.uniq
 locales.each do |loc|
   installed = loc.sub(/\.UTF-8\z/i, '.utf8')
   execute "locale-gen #{loc}" do
-    command "grep -qxF '#{loc} UTF-8' /etc/locale.gen || echo '#{loc} UTF-8' >> /etc/locale.gen; locale-gen"
     not_if "locale -a | grep -qFx '#{installed}'"
   end
 end
