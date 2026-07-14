@@ -64,7 +64,36 @@ function history-selection () {
 }
 zle -N history-selection
 bindkey '^R' history-selection
+<% if node.dig('ssh_selection', 'enable') -%>
+
+# fzf: ~/.ssh/config からホストを選んで ssh する。Alt-S にバインド。
+# Host エントリと末尾の "# 説明" コメントは chubo2 の workstation レシピが
+# config/node から生成する。説明（例: 美食丼）も fzf の検索対象になる。
+function ssh-selection () {
+  local line host
+  line=$(awk '
+      /^Host [^*]/ { if (host) print host (desc ? "  " desc : ""); host=$2; desc="" }
+      /^[[:space:]]*#/ { d=$0; sub(/^[[:space:]]*#[[:space:]]*/, "", d); desc=d }
+      END { if (host) print host (desc ? "  " desc : "") }
+    ' ~/.ssh/config \
+    | fzf --prompt='ssh> ' --height=40% --reverse)
+  host=${line%% *}
+  if [[ -n "$host" ]]; then
+    BUFFER="ssh $host"
+    CURSOR=$#BUFFER
+    zle reset-prompt
+    zle accept-line
+  else
+    zle reset-prompt
+  fi
+}
+zle -N ssh-selection
+bindkey '\es' ssh-selection
+<% end -%>
 <% if node.dig('nvm', 'enable') -%>
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 <% end -%>
+
+# 端末固有の設定（chubo 管理外）。存在すれば読み込む。
+[ -f ~/.zshrc.local ] && source ~/.zshrc.local
