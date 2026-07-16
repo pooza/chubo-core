@@ -1,0 +1,6 @@
+$FileOwner root
+
+$template <%= @proxy['tag'] %>, "/var/log/nginx/<%= @proxy['host'] %>/%$year%/%$month%/access_%$year%%$month%%$day%.log"
+$template raw, "%msg%\n"
+
+:programname, isequal, "<%= @proxy['tag'] %>" -?<%= @proxy['tag'] %>;raw

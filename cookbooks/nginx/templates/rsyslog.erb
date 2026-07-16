@@ -2,12 +2,4 @@ $FileOwner root
 
 $template raw, "%msg%\n"
 
-# access ログはドメイン別 vhost が tag=nginx_<name> で syslog へ流す。programname を
-# 使った動的ファイル名で per-tag のディレクトリへ日次ファイルとして振り分ける。
-# 本番は per-domain の nginx_<name>.conf を手管理しているが、staging はこの汎用ルールで
-# 賄う（vhost が cookbook 管理外＝tag の一覧を持てないため）。ファイル名は本番同型
-# （%Y/%m/access_%Y%m%d.log）で、writersbase-tools の access_log_compress が拾える。
-$template nginxAccess, "/var/log/nginx/%programname%/%$year%/%$month%/access_%$year%%$month%%$day%.log"
-
 :programname, isequal, "nginx" -/var/log/nginx/error/error.log
-:programname, startswith, "nginx_" -?nginxAccess;raw
