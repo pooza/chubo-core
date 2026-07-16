@@ -33,7 +33,9 @@ when 'freebsd'
     mode '0644'
   end
 
-  execute 'sysrc rsyslogd_enable="YES"'
+  execute 'sysrc rsyslogd_enable="YES"' do
+    not_if 'sysrc -n rsyslogd_enable 2>/dev/null | grep -qi "^yes$"'
+  end
   service 'rsyslogd' do
     action [:start, :restart]
   end
