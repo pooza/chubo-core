@@ -42,7 +42,11 @@ http {
     listen 80;
     listen [::]:80;
     location / {
+<% if node.platform == 'freebsd' -%>
+      root /usr/local/www/nginx;
+<% else -%>
       root /var/www/html;
+<% end -%>
     }
   }
 
