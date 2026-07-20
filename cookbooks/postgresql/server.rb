@@ -21,6 +21,20 @@ when 'freebsd'
     action [:start]
   end
 
+  # node の postgresql.tuning を ALTER SYSTEM で適用する。
+  # 本番 3 台は同じ値が手作業で入っていたが、レシピが参照していなかったため
+  # 新規構築機だけが既定値のまま立ち上がっていた（pooza/chubo2#76）。
+  # ALTER SYSTEM は postgresql.auto.conf へ `key = 'value'` の形で書くので、
+  # そのまま冪等判定に使える。shared_buffers 等は反映に再起動が要る。
+  (node.dig('postgresql', 'tuning') || {}).each do |key, value|
+    execute "alter system set #{key}" do
+      command %(/usr/local/bin/psql -c "ALTER SYSTEM SET #{key} = '#{value}'")
+      user 'postgres'
+      not_if %(grep -qF "#{key} = '#{value}'" #{data_dir}/postgresql.auto.conf)
+      notifies :restart, 'service[postgresql]'
+    end
+  end
+
   template '/usr/local/etc/rsyslog.d/postgresql.conf' do
     source 'templates/rsyslog.erb'
     owner 'root'
