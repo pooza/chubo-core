@@ -49,6 +49,19 @@ native_packages.each do |pkg|
   package pkg
 end
 
+# 後段の bundle install / rake install は root の system ruby から bundler を呼ぶが、
+# これまでレシピが保証しておらず、本番機では手動 gem install の成果物に頼っていた。
+# 新規構築機では bundle が居らず install_periodic が黙って空振りする。
+#
+# pkg の rubygem-bundler は使わない。FreeBSD の pkg から入れる Ruby 関連は
+# ruby / ruby34-gems / rbenv / ruby-build に限る方針（pkg 管理の gem と
+# gem install の gem が二重管理になり、版が pkg のリリースサイクルに縛られる）。
+if node.platform == 'freebsd'
+  execute 'gem install bundler' do
+    not_if 'which bundle'
+  end
+end
+
 directory config_dir do
   owner 'root'
   group root_group
