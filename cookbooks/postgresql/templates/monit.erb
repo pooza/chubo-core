@@ -1,0 +1,7 @@
+<%
+  # monit の matching は正規表現なので、データディレクトリはバージョン抜きの
+  # /var/db/postgres までで足りる（実際の -D は data18 のようにバージョン付き）。
+-%>
+check process postgresql with matching "/usr/local/bin/postgres -D /var/db/postgres"
+  start program = "/usr/sbin/service postgresql restart" with timeout 60 seconds
+  stop program = "/usr/sbin/service postgresql stop"

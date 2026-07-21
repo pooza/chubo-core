@@ -33,3 +33,15 @@ execute 'sysrc rsyslogd_enable="YES"'
 service 'rsyslogd' do
   action [:start, :restart]
 end
+
+template '/usr/local/etc/monit.d/pgbouncer' do
+  source 'templates/monit.erb'
+  owner 'root'
+  group node.dig('root', 'group')
+  mode '0644'
+  only_if 'test -d /usr/local/etc/monit.d'
+end
+
+execute 'monit reload' do
+  only_if 'service monit status'
+end

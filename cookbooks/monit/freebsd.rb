@@ -16,6 +16,17 @@ template '/usr/local/etc/monitrc' do
   mode '0600'
 end
 
+# 監視対象のファイルシステムはノードによって違う（/var/db/postgres を別データセットに
+# 切っている機とそうでない機がある）ので、node の monit.filesystems 宣言から生成する。
+if node.dig('monit', 'filesystems').present?
+  template '/usr/local/etc/monit.d/disk' do
+    source 'templates/disk.erb'
+    owner 'root'
+    group node.dig('root', 'group')
+    mode '0644'
+  end
+end
+
 execute 'sysrc monit_enable="YES"'
 service 'monit' do
   action [:start, :restart]
