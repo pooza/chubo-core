@@ -18,7 +18,13 @@ end
 
 # 監視対象のファイルシステムはノードによって違う（/var/db/postgres を別データセットに
 # 切っている機とそうでない機がある）ので、node の monit.filesystems 宣言から生成する。
-if node.dig('monit', 'filesystems').present?
+#
+# ※ node は Hashie::Mash なので present? を使ってはいけない。Mash の method_missing が
+#    `present?` を「present というキーがあるか」の述語として横取りし、中身に関係なく
+#    常に false を返す。例外も出ないので、レシピが黙って何もしない形で壊れる。
+filesystems = node.dig('monit', 'filesystems') || {}
+
+unless filesystems.empty?
   template '/usr/local/etc/monit.d/disk' do
     source 'templates/disk.erb'
     owner 'root'
