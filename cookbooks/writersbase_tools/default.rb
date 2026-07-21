@@ -128,12 +128,19 @@ if node.dig('writersbase_tools', 'rclone', 'enable')
   rclone_remotes_data = node.dig('writersbase_tools', 'rclone', 'remotes') || {}
   rclone_remotes = JSON.parse(rclone_remotes_data.to_json)
 
+  # rclone.conf は rclone 自身がトークン更新のたびに書き換える「実行時の状態ファイル」
+  # なので、構成管理は無ければ作るまでに留める。無条件に上書きすると
+  #   1. 更新済みの access_token が local.yaml の古い値へ毎回巻き戻る（冪等でない）
+  #   2. その diff を Controller#report_result が Slack webhook へ平文で投稿してしまう
+  #      （refresh_token が丸ごと流れる）
+  # remotes を差し替えるときは、このファイルを消してから流すこと。
   template '/root/.config/rclone/rclone.conf' do
     source 'templates/rclone.conf.erb'
     owner 'root'
     group root_group
     mode '0600'
     variables(remotes: rclone_remotes)
+    not_if 'test -f /root/.config/rclone/rclone.conf'
   end
 end
 
