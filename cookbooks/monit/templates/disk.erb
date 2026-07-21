@@ -1,0 +1,4 @@
+<% node.dig('monit', 'filesystems').each do |name, path| -%>
+check filesystem <%= name %> with path <%= path %>
+  if space usage > <%= node.dig('monit', 'disk_threshold') || 90 %>% for 5 cycles then alert
+<% end -%>

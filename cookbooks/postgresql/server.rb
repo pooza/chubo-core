@@ -53,6 +53,18 @@ when 'freebsd'
   service 'rsyslogd' do
     action [:start, :restart]
   end
+
+  template '/usr/local/etc/monit.d/postgres' do
+    source 'templates/monit.erb'
+    owner 'root'
+    group node.dig('root', 'group')
+    mode '0644'
+    only_if 'test -d /usr/local/etc/monit.d'
+  end
+
+  execute 'monit reload' do
+    only_if 'service monit status'
+  end
 when 'ubuntu'
   # Ubuntu ネイティブ postgresql（26.04 は PG18）。PGDG は resolute 未対応の恐れがあり、
   # ステージングはインフラ忠実性が対象外のため native を採る。apt がクラスタ作成＋
