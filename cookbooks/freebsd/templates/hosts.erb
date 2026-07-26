@@ -1,4 +1,8 @@
+<%#
+  ループバックは外部 IPv6 接続性と無関係なので node.ipv6 で分岐しない (#15)。
+  ::1 localhost が無いと Ruby 3.4+ の Happy Eyeballs v2 が AAAA を DNS へ問い合わせに行き、
+  その決着を待つあいだ localhost への TCP 接続 1 回につき 305ms を払う。
+  エラーを伴わない遅延なので気づけない（pooza/mulukhiya-toot-proxy#4481）。
+-%>
 127.0.0.1 localhost
-<% if node.ipv6 -%>
 ::1 localhost
-<% end -%>
