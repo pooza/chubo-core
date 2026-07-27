@@ -25,6 +25,11 @@ server {
   ssl_certificate_key /etc/letsencrypt/live/<%= @proxy['host'] %>/privkey.pem;
   add_header Strict-Transport-Security max-age=63072000;
 
+<% if @proxy['redirect'] -%>
+  location / {
+    return 302 <%= @proxy['redirect'] %>;
+  }
+<% else -%>
   location / {
     proxy_pass http://<%= @proxy['backend'] %>;
     proxy_set_header Host $host;
@@ -35,4 +40,5 @@ server {
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
   }
+<% end -%>
 }
