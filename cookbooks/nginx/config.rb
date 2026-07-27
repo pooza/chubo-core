@@ -38,6 +38,9 @@ end
 # 露出すべきアプリが無いので所有者になれる cookbook が存在しない。それは nginx の設定
 # そのものなので、node yaml の宣言からここで生成する。自ノードのアプリを露出する vhost は
 # host/port を知っているアプリ側の cookbook が持つこと（wikijs, uptime-kuma 等）。
+# backend の代わりに redirect を書くと、中継せず 302 を返すだけの vhost になる
+# （別ホストの status ページや外部フォームへの入口など）。証明書と access ログの
+# 扱いは中継用と同じなので、同じ proxies に並べる。
 (node.dig('nginx', 'proxies') || []).each do |proxy|
   template "#{nginx_dir}/servers/#{proxy['host']}.conf" do
     source 'templates/proxy.conf.erb'
