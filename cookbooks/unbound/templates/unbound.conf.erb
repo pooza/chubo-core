@@ -62,7 +62,16 @@ server:
   local-data: "<%= fqdn.call(name) %> <%= ttl %> IN A <%= addr %>"
 <%- end -%>
 <%- (zone['aliases'] || {}).sort.each do |name, target| -%>
+<%- if (zone['hosts'] || {}).key?(target.to_s) -%>
+  # ⚠ unbound は local-data の CNAME を同一ローカルゾーン内で追わない。
+  # CNAME のまま置くと応答が CNAME 1 本だけになり、クライアントに追加の
+  # 問い合わせを強いる（権威 DNS なら A まで返すところ）。転送先が hosts に
+  # ある場合はここで A に潰す。参照元が 1 つなので drift は起きない。
+  local-data: "<%= fqdn.call(name) %> <%= ttl %> IN A <%= (zone['hosts'] || {})[target.to_s] %>"
+<%- else -%>
+  # 転送先がゾーン外なので CNAME のまま置く（unbound は外部ならば追える）
   local-data: "<%= fqdn.call(name) %> <%= ttl %> IN CNAME <%= fqdn.call(target) %>"
+<%- end -%>
 <%- end -%>
 <%- end -%>
 <%- if Array(conf['forwarders']).any? -%>
