@@ -1,0 +1,78 @@
+<%-
+  conf   = node.dig('unbound') || {}
+  zone   = conf['zone'] || {}
+  origin = zone['name'].to_s.sub(/\.\z/, '')
+  ttl    = conf['ttl'] || 3600
+  soa    = zone['soa'] || {}
+
+  # 末尾がドットなら FQDN 指定とみなしてそのまま、そうでなければゾーンを補う
+  fqdn = lambda do |name|
+    n = name.to_s
+    n.end_with?('.') ? n : "#{n}.#{origin}."
+  end
+-%>
+# このファイルは chubo-core の unbound レシピが生成する。手で編集しても
+# 次回プロビジョニングで上書きされる。
+#
+# Ubuntu の /etc/unbound/unbound.conf が conf.d/*.conf を include-toplevel
+# するため、パッケージ本体の設定は温存したまま drop-in として追加される。
+
+server:
+  # ⚠ systemd-resolved が 127.0.0.53:53 / 127.0.0.54:53 を掴んでいるため、
+  # interface に 0.0.0.0 を指定すると bind に失敗して unbound が起動しない。
+  # LAN アドレスと 127.0.0.1 を名指しでバインドして共存させる。
+  # （resolved を止める手もあるが、コンテナ自身の名前解決を巻き込むので採らない）
+<%- Array(conf['interfaces']).each do |addr| -%>
+  interface: <%= addr %>
+<%- end -%>
+
+  # 既定を明示的に打ち消してから許可する（allow は node yaml 側で列挙）
+  access-control: 0.0.0.0/0 refuse
+<%- Array(conf['access_control']).each do |cidr| -%>
+  access-control: <%= cidr %> allow
+<%- end -%>
+
+  do-ip4: yes
+  do-ip6: <%= conf['ipv6'] ? 'yes' : 'no' %>
+  do-udp: yes
+  do-tcp: yes
+
+  verbosity: <%= conf['verbosity'] || 1 %>
+  use-syslog: yes
+  hide-identity: yes
+  hide-version: yes
+  qname-minimisation: yes
+  prefetch: yes
+
+<%- unless origin.empty? -%>
+  # ---- ローカルゾーン <%= origin %> ----
+  # type static: ゾーン内に存在するが該当タイプを持たない名前へ NODATA を返す。
+  # LAN は v4 のみで AAAA レコードを持たないが、クライアントは getaddrinfo で
+  # AAAA も引くため、ここで NODATA を返せることが必須（無応答だと happy eyeballs
+  # で待たされる）。ゾーン外の名前には NXDOMAIN を返す。
+  local-zone: "<%= origin %>." static
+
+<%- if soa['mname'] -%>
+  local-data: "<%= origin %>. <%= ttl %> IN SOA <%= fqdn.call(soa['mname']) %> <%= soa['rname'] %> <%= soa['serial'] %> <%= soa['refresh'] || 1800 %> <%= soa['retry'] || 900 %> <%= soa['expire'] || 604800 %> <%= soa['minimum'] || 300 %>"
+<%- end -%>
+<%- Array(zone['nameservers']).each do |ns| -%>
+  local-data: "<%= origin %>. <%= ttl %> IN NS <%= fqdn.call(ns) %>"
+<%- end -%>
+<%- (zone['hosts'] || {}).sort.each do |name, addr| -%>
+  local-data: "<%= fqdn.call(name) %> <%= ttl %> IN A <%= addr %>"
+<%- end -%>
+<%- (zone['aliases'] || {}).sort.each do |name, target| -%>
+  local-data: "<%= fqdn.call(name) %> <%= ttl %> IN CNAME <%= fqdn.call(target) %>"
+<%- end -%>
+<%- end -%>
+<%- if Array(conf['forwarders']).any? -%>
+
+forward-zone:
+  # ローカルゾーン以外の問い合わせの転送先。現構成では NVR510 が
+  # <%= origin %> 宛だけをここへ送るので通常は使われないが、
+  # クライアントが conger を直接向いても解決できるようにしておく。
+  name: "."
+<%- Array(conf['forwarders']).each do |addr| -%>
+  forward-addr: <%= addr %>
+<%- end -%>
+<%- end -%>
