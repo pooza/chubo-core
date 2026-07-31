@@ -103,6 +103,15 @@ execute "rbenv install #{version} for #{deployer}" do
   not_if guard
 end
 
+# ビルド結果を検証する。YJIT は Rust が無いと configure 時に黙って外れ、
+# エラーを出さないまま YJIT 抜きの Ruby が完成して本番に載りうる（実測で
+# バイトコード実行が 24-25% 遅くなる / pooza/chubo2#69）。上の not_if は
+# 「YJIT が無ければ作り直す」だけで、作り直した結果は誰も見ていないため、
+# ここで落として気づけるようにする。冪等性より検知を優先し毎回実行する。
+execute "verify YJIT is built into ruby #{version}" do
+  command "#{env}RBENV_VERSION=#{version} #{rbenv} exec ruby --yjit -e 'exit RubyVM::YJIT.enabled?'"
+end
+
 execute "rbenv global #{global} for #{deployer}" do
   command "#{env}#{rbenv} global #{global}"
   user deployer
