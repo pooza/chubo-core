@@ -1,4 +1,8 @@
-worker_processes 1;
+<%# worker_processes を 1 に固定していると、コア数に関係なく 1 プロセスで TLS 終端と
+    HTTP/2 を捌くことになる。2026-08-02 のキュアスタ！高負荷（約 5,000 req/分・504 が
+    808 件）では 4 vCPU の gomander が 1 worker のままだった。既定を auto（= コア数）に
+    し、事情のあるノードだけ node yaml の nginx.worker_processes で上書きする。 -%>
+worker_processes <%= node.dig('nginx', 'worker_processes') || 'auto' %>;
 <% if node.platform == 'freebsd' -%>
 user www;
 <% else -%>
