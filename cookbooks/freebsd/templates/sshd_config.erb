@@ -6,7 +6,11 @@ LogLevel INFO
 # Authentication:
 PermitRootLogin no
 StrictModes yes
-AllowGroups <%= node.dig('wheel', 'group') %> <%= node.dig('sudo', 'group') %>
+<%# ⚠ ログインさせたいだけのサービスアカウントを sudo グループへ入れて回避しないこと。 -%>
+<%# FreeBSD の sudo.group は operator で、これは /dev のディスクデバイス（0640 -%>
+<%# root:operator）を読める権限でもある。ssh.allow_groups にそのアカウント専用の -%>
+<%# グループを足すこと（pooza/chubo2#156）。 -%>
+AllowGroups <%= [node.dig('wheel', 'group'), node.dig('sudo', 'group'), *Array(node.dig('ssh', 'allow_groups'))].compact.uniq.join(' ') %>
 PubkeyAuthentication yes
 AuthorizedKeysFile .ssh/authorized_keys
 HostbasedAuthentication no

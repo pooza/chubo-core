@@ -6,7 +6,9 @@ LogLevel INFO
 # Authentication:
 PermitRootLogin no
 StrictModes yes
-AllowGroups <%= node.dig('wheel', 'group') %> <%= node.dig('sudo', 'group') %>
+<%# ⚠ ログインさせたいだけのサービスアカウントを sudo グループへ入れて回避しないこと。 -%>
+<%# ssh.allow_groups にそのアカウント専用のグループを足す（pooza/chubo2#156）。 -%>
+AllowGroups <%= [node.dig('wheel', 'group'), node.dig('sudo', 'group'), *Array(node.dig('ssh', 'allow_groups'))].compact.uniq.join(' ') %>
 PubkeyAuthentication yes
 AuthorizedKeysFile .ssh/authorized_keys
 HostbasedAuthentication no
