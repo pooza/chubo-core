@@ -5,6 +5,9 @@ kern.geom.label.gptid.enable="0"
 vfs.zfs.prefetch_disable="1"
 vfs.zfs.min_auto_ashift="12"
 vfs.zfs.arc_max="<%= node.dig('zfs', 'arc_max') %>"
+<% if node.dig('zfs', 'arc_dnode_limit') -%>
+vfs.zfs.arc.dnode_limit="<%= node.dig('zfs', 'arc_dnode_limit') %>"
+<% end -%>
 console="comconsole"
 virtio_load="YES"
 virtio_blk_load="YES"
