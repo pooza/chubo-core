@@ -11,6 +11,21 @@ auth_type = trust
 auth_file = /usr/local/etc/pgbouncer.users
 admin_users = pgbouncer
 pool_mode = transaction
+
+; クライアント（アプリ）側の接続上限。pgbouncer の既定は 100 で、Mastodon の
+; DB_POOL=40 × puma worker 2 + sidekiq だけで潜在 120 を超えるため構造的に足りない。
+; 平常時は接続が遅延生成されて 10〜20 本で収まるので、枯渇はバーストでしか出ない。
+;
+; 実績: 2026-08-02 06:09 gomander の FeedUpdateWorker が全滅（ニチアサ窓の 2.5 時間前）、
+; 2026-08-08 10:05 shallu がブースト起因の AP フェッチ雪崩で 3 分間に 500 を 2209 件。
+; どちらも "no more connections allowed (max_client_conn)"。
+;
+; ⚠ 上げるのはクライアント側だけ。PostgreSQL の max_connections を守っているのは
+; default_pool_size のほうなので、そちらは上げない。クライアント 1 本あたりの
+; メモリは数 KB なので 500 でも数 MB に収まる。
+max_client_conn = <%= node.dig('pgbouncer', 'max_client_conn') || 500 %>
+default_pool_size = <%= node.dig('pgbouncer', 'default_pool_size') || 20 %>
+
 syslog = 1
 syslog_facility = daemon
 syslog_ident = pgbouncer
