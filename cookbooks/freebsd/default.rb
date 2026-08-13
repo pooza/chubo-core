@@ -3,6 +3,7 @@ exit unless node.platform == 'freebsd'
 execute "sysrc hostname=#{node.nodename}"
 execute "hostname #{node.nodename}"
 
+include_recipe 'timezone'
 include_recipe 'packages'
 include_recipe 'ssh'
 include_recipe 'cron'
