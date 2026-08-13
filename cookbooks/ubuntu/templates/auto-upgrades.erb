@@ -1,0 +1,5 @@
+// chubo が管理する。手で編集しない (pooza/chubo2#166)。
+// APT::Periodic::Unattended-Upgrade が 0 なら apt-daily-upgrade.timer は
+// パッケージを入れない (パッケージ一覧の更新は続ける)。
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "<%= @config['enable'] ? 1 : 0 %>";
