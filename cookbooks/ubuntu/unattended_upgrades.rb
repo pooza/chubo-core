@@ -14,7 +14,15 @@ exit unless node.platform == 'ubuntu'
 config = node['unattended_upgrades']
 exit unless config
 
-package 'unattended-upgrades'
+# ⚠⚠ **パッケージを新規導入はしない。**本レシピの目的は「既に無人で走っているものを
+# 意図した設定に絞る」ことで、無人更新を新たに始めることではない。
+#
+# 2026-08-13 実測: unattended-upgrades が入っているのは **flauros / kues / sweep の
+# 3 台だけ**で、LXC CT 10 台（leech / oscura / bydo / triton / mucor / conger / noah /
+# dev27 / scylla / rubicon）には入っていない（CT の Ubuntu テンプレートに含まれない）。
+# ⚠ `apt-daily-upgrade.timer` は全台 enabled だが、パッケージが無ければ何もしない。
+# **CT 側にセキュリティ自動更新を新規導入するかは別の判断**なので、本レシピでは触らない。
+installed = 'dpkg -l unattended-upgrades 2>/dev/null | grep -q "^ii"'
 
 # ⚠ apt.conf.d は辞書順に読まれ、**リストは後勝ちではなく追記**される。既定の
 # 50unattended-upgrades が入れた Allowed-Origins を消すには `#clear` が要る。
@@ -25,6 +33,7 @@ template '/etc/apt/apt.conf.d/52chubo-unattended-upgrades' do
   group node.dig('root', 'group')
   mode '0644'
   variables(config:)
+  only_if installed
 end
 
 # apt-daily-upgrade.timer が実際に unattended-upgrade を呼ぶかどうか。
@@ -34,4 +43,5 @@ template '/etc/apt/apt.conf.d/20auto-upgrades' do
   group node.dig('root', 'group')
   mode '0644'
   variables(config:)
+  only_if installed
 end
