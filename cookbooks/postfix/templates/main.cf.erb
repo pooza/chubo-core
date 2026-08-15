@@ -1,4 +1,10 @@
-myhostname = <%= node.nodename || node.dig('postfix', 'myhostname') %>
+<%#
+  ⚠ 宣言 (postfix.myhostname) を nodename より先に見ること。
+  create_node_data が nodename を必ず書き込むので、逆順にすると `||` の右辺に到達せず
+  node yaml の宣言が丸ごと死ぬ。実際 shallu は宣言も実機も mstdn.b-shock.org なのに、
+  レシピを流すと shallu.b-shock.co.jp に書き換わる状態だった (pooza/chubo2#121)。
+-%>
+myhostname = <%= node.dig('postfix', 'myhostname') || node.nodename %>
 inet_protocols = all
 compatibility_level = 3.6
 alias_maps = hash:<%= ::File.join(node.dig('postfix', 'dir'), 'aliases') %>
