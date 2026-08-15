@@ -1,0 +1,6 @@
+$FileOwner root
+
+$template <%= @access_log['tag'] %>, "/var/log/nginx/<%= @access_log['host'] %>/%$year%/%$month%/access_%$year%%$month%%$day%.log"
+$template raw, "%msg%\n"
+
+:programname, isequal, "<%= @access_log['tag'] %>" -?<%= @access_log['tag'] %>;raw

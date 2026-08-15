@@ -14,13 +14,20 @@ end
 # 自分が書いていない tag を拾う catch-all（:programname, startswith, "nginx_" 等）は
 # 置かないこと。tag を所有する他の cookbook（wikijs, uptime-kuma, matrix 等）のルールと
 # 両方が発火し、二重書き込みになる。
-(node.dig('nginx', 'proxies') || []).each do |proxy|
-  template "#{rsyslog_dir}/#{proxy['tag']}.conf" do
-    source 'templates/rsyslog_proxy.erb'
+#
+# ⚠ **手管理の vhost が使っている tag は node yaml の `nginx.access_logs` で宣言する**
+# （pooza/chubo2#67）。層1 の vhost をまだ cookbook 化できていない機体では tag を所有する
+# cookbook が存在せず、access ログが `/var/log/messages` にしか残らない。catch-all は
+# 上記の理由で置けないので、**宣言された tag だけを明示的に拾う**。
+# ⚠ これは vhost 自体が cookbook 化されるまでの暫定で、cookbook 化したらそちらへ移すこと。
+access_logs = (node.dig('nginx', 'proxies') || []) + (node.dig('nginx', 'access_logs') || [])
+access_logs.each do |access_log|
+  template "#{rsyslog_dir}/#{access_log['tag']}.conf" do
+    source 'templates/rsyslog_access_log.erb'
     owner 'root'
     group node.dig('root', 'group')
     mode '0644'
-    variables(proxy: proxy)
+    variables(access_log: access_log)
   end
 end
 
