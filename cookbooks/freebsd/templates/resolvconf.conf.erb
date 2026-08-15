@@ -1,0 +1,14 @@
+# resolvconf.conf(5) — /etc/resolv.conf の生成元。
+#
+# ⚠ /etc/resolv.conf を直接編集しないこと。resolvconf(8) の生成物なので、DHCP の機体では
+#   dhclient が起動・renew のたびに書き戻す。変更はこのファイルに書いて `resolvconf -u`。
+#   経緯は pooza/chubo2#75。
+#
+# name_servers は生成される resolv.conf の先頭に入る。resolver(5) は先頭 3 つまでしか
+# 見ないので、DHCP が配るリゾルバは実質使われないが、後段に残るので保険にはなる。
+<% if @name_servers.any? -%>
+name_servers="<%= @name_servers.join(' ') %>"
+<% end -%>
+<% if @search_domains.any? -%>
+search_domains="<%= @search_domains.join(' ') %>"
+<% end -%>
