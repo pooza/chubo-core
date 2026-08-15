@@ -1,0 +1,5 @@
+[mysqld]
+<% if node.dig('mysql', 'server', 'bind_address') -%>
+# 既定は全インターフェース。ローカルのアプリからしか使わないなら 127.0.0.1 に絞る。
+bind-address = <%= node.dig('mysql', 'server', 'bind_address') %>
+<% end -%>
