@@ -49,6 +49,10 @@ module Chubo
       return nodes.length == 1
     end
 
+    def dry_run?
+      return options[:'dry-run'].present?
+    end
+
     def recipes
       recipes = options[:recipes].to_s.split(',').select(&:present?).map do |recipe|
         recipe += '/default' unless recipe.match?('/')
@@ -87,15 +91,17 @@ module Chubo
     end
 
     def create_command(data, recipe)
-      return Ginseng::CommandLine.new([
+      args = [
         'itamae',
         'ssh',
         '-h', data['nodename'],
         '-u', data.dig('node', 'ssh', 'user') || ENV.fetch('USER', nil),
         '-p', data.dig('node', 'ssh', 'port') || 22,
-        '--node-yaml', data['path'],
-        find_recipe(recipe)
-      ])
+        '--node-yaml', data['path']
+      ]
+      args.push('--dry-run') if dry_run?
+      args.push(find_recipe(recipe))
+      return Ginseng::CommandLine.new(args)
     end
 
     def find_recipe(recipe)
@@ -110,6 +116,12 @@ module Chubo
 
     def report_result(node, recipe, command)
       return unless command.stdout.include?('Recipe:') || command.stderr.present?
+      if dry_run?
+        # dry-run はドリフトの調査（pooza/chubo2#121）であって作業ではない。
+        # 全ノードを回すと Slack が埋まるだけなので、端末にだけ出す。
+        puts create_body(node, recipe, command)
+        return
+      end
       puts create_body(node, recipe, command) if single_node?
       webhook.post(create_body(node, recipe, command))
     end
