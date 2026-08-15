@@ -2,4 +2,7 @@
 <% if node.dig('mysql', 'server', 'bind_address') -%>
 # 既定は全インターフェース。ローカルのアプリからしか使わないなら 127.0.0.1 に絞る。
 bind-address = <%= node.dig('mysql', 'server', 'bind_address') %>
+# ⚠ bind-address は X Protocol (33060) を支配しない。これを書かないと 3306 だけ閉じて
+# 33060 が全インターフェースに開いたままになる（pooza/chubo2#173 で踏んだ）。
+mysqlx-bind-address = <%= node.dig('mysql', 'server', 'bind_address') %>
 <% end -%>
