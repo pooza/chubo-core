@@ -1,0 +1,3 @@
+# chubo-core の zfs cookbook が管理する。手で編集しない。
+# 既定では ARC が RAM の 50% まで育ち、DB のバッファキャッシュと食い合う。
+options zfs zfs_arc_max=<%= @arc_max_bytes %>

@@ -1,0 +1,5 @@
+# chubo-core の zfs cookbook が管理する。手で編集しない。
+# postgresql@.service のテンプレートユニットに当てているので、@NN-main の NN に依存しない。
+[Unit]
+After=zfs-mount.service
+Requires=zfs-mount.service
