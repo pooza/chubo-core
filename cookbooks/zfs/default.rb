@@ -36,6 +36,14 @@ end
 # postgresql@.service.d の drop-in も併せて適用するので、PG のメジャー版に依存しない
 # （vulcan で systemctl cat / systemctl show -p Requires まで確認済み）。
 if node.dig('postgresql', 'server', 'enable')
+  # ⚠ notifies の解決は「通知する側が走る時点」に行われるので、この定義は通知する
+  # テンプレートより前に無いと `resource is not found` で落ちる（nginx cookbook と同じ）。
+  # ⚠ 無条件の daemon-reload にすると --dry-run が毎回これを差分として出し、
+  # ドリフト確認（pooza/chubo2#121）のノイズになる。
+  execute 'systemctl daemon-reload' do
+    action :nothing
+  end
+
   directory '/etc/systemd/system/postgresql@.service.d' do
     owner 'root'
     group node.dig('root', 'group')
@@ -47,7 +55,6 @@ if node.dig('postgresql', 'server', 'enable')
     owner 'root'
     group node.dig('root', 'group')
     mode '0644'
+    notifies :run, 'execute[systemctl daemon-reload]'
   end
-
-  execute 'systemctl daemon-reload'
 end
