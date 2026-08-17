@@ -75,4 +75,25 @@ when 'ubuntu'
   service 'postgresql' do
     action [:enable, :start]
   end
+
+  # ⚠ pg_hba.conf はこれまでどのレシピも管理しておらず、sweep も dev27 も手作業だった
+  # （infra-note の「local と 127.0.0.1/::1 を trust」は状態の記述で、宣言ではなかった）。
+  # 宣言のあるノードだけ管理下に置く（pooza/chubo2#35）。
+  # ⚠ パスに版が入るので postgresql.version の宣言が要る。Ubuntu は native を入れるので、
+  # platform 既定（PGDG 用）ではなく実際に入る版を node yaml に書くこと。
+  if (hba = node.dig('postgresql', 'server', 'hba'))
+    # ⚠ notifies の解決は「通知する側が走る時点」なので、template より前に置く。
+    execute 'systemctl reload postgresql' do
+      action :nothing
+    end
+
+    template "/etc/postgresql/#{node.dig('postgresql', 'version')}/main/pg_hba.conf" do
+      source 'templates/pg_hba.conf.erb'
+      owner 'postgres'
+      group 'postgres'
+      mode '0640'
+      variables(hba:)
+      notifies :run, 'execute[systemctl reload postgresql]'
+    end
+  end
 end
