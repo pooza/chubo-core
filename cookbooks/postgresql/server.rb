@@ -69,8 +69,12 @@ when 'ubuntu'
   # Ubuntu ネイティブ postgresql（26.04 は PG18）。PGDG は resolute 未対応の恐れがあり、
   # ステージングはインフラ忠実性が対象外のため native を採る。apt がクラスタ作成＋
   # systemd 起動まで行うので initdb 不要。
+  # ⚠ postgresql-contrib は入れない。26.04 には実体が無く（apt の候補が無い仮想パッケージ）、
+  # apt は postgresql-18 で満たして正常終了するが dpkg 上は un のままなので、
+  # itamae が毎回「未インストール」と報告してドリフト確認（pooza/chubo2#121）を濁す。
+  # contrib のエクステンション（pg_trgm / pgcrypto / hstore / pg_stat_statements）は
+  # postgresql-18 に同梱されていることを実機で確認済み。
   package 'postgresql'
-  package 'postgresql-contrib'
 
   service 'postgresql' do
     action [:enable, :start]
