@@ -1,0 +1,8 @@
+check process <%= @name %> with matching "<%= @config['matching'] %>"
+<% if @config['service'] -%>
+  start program = "/usr/sbin/service <%= @config['service'] %> restart" with timeout <%= @config['timeout'] || 60 %> seconds
+  stop program = "/usr/sbin/service <%= @config['service'] %> stop"
+<% end -%>
+<% if @config['totalmem'] -%>
+  if totalmem > <%= @config['totalmem'] %> MB for <%= @config['cycles'] || 10 %> cycles then restart
+<% end -%>
