@@ -12,7 +12,7 @@ case node.platform
 when 'freebsd'
   # rbenv / ruby-build / ビルド依存（rust 含む）はすべて pkg で入る
   ['rbenv', 'ruby-build', 'autoconf', 'bison', 'readline', 'openssl',
-   'libyaml', 'libffi', 'rust'].each do |pkg|
+    'libyaml', 'libffi', 'rust'].each do |pkg|
     package pkg
   end
 
@@ -33,8 +33,8 @@ when 'freebsd'
 when 'ubuntu'
   # apt に rbenv / ruby-build / rust が無いため git + rustup で用意する
   ['git', 'curl', 'build-essential', 'autoconf', 'bison', 'libssl-dev',
-   'libreadline-dev', 'zlib1g-dev', 'libyaml-dev', 'libffi-dev',
-   'libgdbm-dev', 'libncurses-dev', 'pkg-config', 'libjemalloc-dev'].each do |pkg|
+    'libreadline-dev', 'zlib1g-dev', 'libyaml-dev', 'libffi-dev',
+    'libgdbm-dev', 'libncurses-dev', 'pkg-config', 'libjemalloc-dev'].each do |pkg|
     package pkg
   end
 
@@ -54,14 +54,14 @@ when 'ubuntu'
   #   共有ライブラリ（libvips → libcurl）を dlopen すると
   #   `version OPENSSL_3.2.0 not found` で失敗する。
   configure_opts = '--with-jemalloc --with-openssl-dir=/usr'
-  env = "RBENV_ROOT=#{rbenv_root} RUBY_CONFIGURE_OPTS='#{configure_opts}' " \
-    "PATH=#{rbenv_root}/bin:#{rbenv_root}/shims:#{cargo_home}/bin:/usr/local/bin:/usr/bin:/bin "
+  env = "RBENV_ROOT=#{rbenv_root} RUBY_CONFIGURE_OPTS='#{configure_opts}'" \
+    " PATH=#{rbenv_root}/bin:#{rbenv_root}/shims:#{cargo_home}/bin:/usr/local/bin:/usr/bin:/bin "
 
   # 既存の Ruby が上の 2 点を満たしているか。満たしていなければ作り直す。
   # `rbenv install --force` は prefix を消さないので、同梱 openssl ディレクトリの
   # 有無ではなく「実際に何をリンクしているか」で判定する。
-  ruby_openssl = "#{env}RBENV_VERSION=#{version} #{rbenv} exec " \
-    "ruby -ropenssl -e 'print OpenSSL::OPENSSL_LIBRARY_VERSION.split[1]'"
+  ruby_openssl = "#{env}RBENV_VERSION=#{version} #{rbenv} exec" \
+    " ruby -ropenssl -e 'print OpenSSL::OPENSSL_LIBRARY_VERSION.split[1]'"
   build_opts_check = %(test "$(#{ruby_openssl})" = "$(openssl version | awk '{print $2}')")
   # jemalloc は LIBS ではなく MAINLIBS に載る（LIBS を見ると毎回リビルドになる）
   jemalloc_expr = %(exit RbConfig::CONFIG["MAINLIBS"].to_s.include?("-ljemalloc"))
@@ -80,9 +80,9 @@ when 'ubuntu'
 
   # Rust（rustup / 最小プロファイル）。YJIT のビルドに必要
   execute "install rustup for #{deployer}" do
-    command "HOME=#{home} CARGO_HOME=#{cargo_home} RUSTUP_HOME=#{home}/.rustup " \
-      "sh -c \"curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs " \
-      '| sh -s -- -y --default-toolchain stable --profile minimal"'
+    command "HOME=#{home} CARGO_HOME=#{cargo_home} RUSTUP_HOME=#{home}/.rustup" \
+      " sh -c \"curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs" \
+      ' | sh -s -- -y --default-toolchain stable --profile minimal"'
     user deployer
     not_if "test -x #{cargo_home}/bin/rustc"
   end
