@@ -11,8 +11,9 @@ CRON=1
 1,31 0-5 * * * root adjkerntz -a
 0 * * * * root newsyslog
 
+<%# ⚠ 分は rand ではなくノード名から決定的に導く。理由は cron.rb を参照（pooza/chubo2#121）。 -%>
 */5 * * * * root periodic frequently
-<%= rand(0..59) %> * * * * root periodic hourly
-<%= rand(0..59) %> 3 * * * root periodic daily
-<%= rand(0..59) %> 2 * * 6 root periodic weekly
-<%= rand(0..59) %> 1 1 * * root periodic monthly
+<%= @minutes['hourly'] %> * * * * root periodic hourly
+<%= @minutes['daily'] %> 3 * * * root periodic daily
+<%= @minutes['weekly'] %> 2 * * 6 root periodic weekly
+<%= @minutes['monthly'] %> 1 1 * * root periodic monthly
