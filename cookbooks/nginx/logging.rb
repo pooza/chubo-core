@@ -31,6 +31,32 @@ access_logs.each do |access_log|
   end
 end
 
+# access ログの保持期間。⚠ **宣言しない限り掃除しない**（既定は無期限）。
+# error ログは newsyslog / logrotate が世代で回すが、access ログは日付名で毎日
+# 新しいファイルが生まれるため世代管理に載らず、圧縮されるだけで誰も消していなかった
+# （pooza/chubo2#142）。掃除は不可逆なので、日数は node / platform yaml で明示させる。
+retention_days = node.dig('nginx', 'access_log_retention_days').to_i
+# ⚠ FreeBSD は periodic の実行順を数字で決める。圧縮（901）より後に置く。
+cleanup_script = if node.platform == 'freebsd'
+                   '/usr/local/etc/periodic/daily/910.nginx-access-log-cleanup'
+                 else
+                   '/etc/cron.daily/nginx-access-log-cleanup'
+                 end
+
+if retention_days.positive?
+  template cleanup_script do
+    source 'templates/cleanup_access_log.sh.erb'
+    owner 'root'
+    group node.dig('root', 'group')
+    mode '0755'
+    variables(days: retention_days)
+  end
+else
+  file cleanup_script do
+    action :delete
+  end
+end
+
 case node.platform
 when 'freebsd'
   template '/usr/local/etc/newsyslog.conf.d/nginx.conf' do

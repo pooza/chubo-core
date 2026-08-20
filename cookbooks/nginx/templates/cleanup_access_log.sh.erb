@@ -1,0 +1,26 @@
+#!/bin/sh
+# ⚠ chubo-core の nginx cookbook が生成している。手で編集しても次の適用で消える。
+#
+# access ログは rsyslog が日付名で書く（templates/rsyslog_access_log.erb）:
+#   /var/log/nginx/<ホスト名>/<年>/<月>/access_<年月日>.log
+# 翌日 writersbase-tools の access_log_compress が圧縮する（FreeBSD は .zst /
+# Ubuntu は .gz）。⚠⚠ **圧縮するだけで、消す担当が誰も居なかった**ので無限に溜まる
+# （pooza/chubo2#142。2026-08-21 実測で sweep 2275 ファイル / shallu 最古 2026-02）。
+#
+# ⚠ 世代管理型の logrotate / newsyslog には載せられない。ファイル名が日付で毎日
+# 変わるので、「同じ名前を .1 .2 とずらす」モデルと噛み合わない。
+#
+# ⚠ 圧縮スクリプトとの実行順は問わない。ここが消すのは保持期間を過ぎたもの＝
+# すでに圧縮済みのものだけで、今日ぶんには手を出さないため。
+set -eu
+
+dir=/var/log/nginx
+days=<%= @days %>
+
+test -d "$dir" || exit 0
+
+find "$dir" -type f -name 'access_*' -mtime +"$days" -delete
+
+# 空になった 年 / 月 のディレクトリを畳む。⚠ mindepth 2 なので <ホスト名> の階層と
+# /var/log/nginx/error（error ログの置き場）は残る。
+find "$dir" -mindepth 2 -type d -empty -delete
