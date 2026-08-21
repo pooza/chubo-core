@@ -1,3 +1,4 @@
+require_relative 'stream_command_line'
 require_relative 'controller'
 
 module Chubo

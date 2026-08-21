@@ -22,11 +22,26 @@ module Chubo
       data['path'] = create_node_file(data)
       recipes.each do |recipe|
         command = create_command(data, recipe)
-        command.exec
+        secs = Time.elapse {command.exec}
+        report_progress(node, recipe, command, secs)
         report_result(node, recipe, command)
       end
     ensure
       FileUtils.rm_f(data['path'])
+    end
+
+    # 端末に向いているか。⚠⚠ **進捗表示はここが真のときだけ**にする。
+    # `tools/drift-sweep.rb` のように出力を捕まえて機械的に読む側がいるので、
+    # パイプに向けたときの挙動は従来と 1 バイトも変えない（pooza/chubo2#9）。
+    def tty?
+      return $stderr.tty?
+    end
+
+    # ⚠ dry-run では流さない。**dry-run の値は整形済みの報告のほう**にあり
+    # （ドリフト棚卸し・pooza/chubo2#121）、生ログを重ねても読みにくくなるだけ。
+    # 長いのは ruby のビルドや pkg update ＝ 実適用の側。
+    def stream?
+      return tty? && single_node? && !dry_run?
     end
 
     def webhook
@@ -101,6 +116,8 @@ module Chubo
       ]
       args.push('--dry-run') if dry_run?
       args.push(find_recipe(recipe))
+      return StreamCommandLine.new(args) if stream?
+
       return Ginseng::CommandLine.new(args)
     end
 
@@ -114,6 +131,16 @@ module Chubo
       raise "Recipe not found: #{recipe}"
     end
 
+    # 複数ノードを並列で回している間は、どのノードのどのレシピが終わったのかが
+    # 全く分からない（報告は最後にまとめて出る）。⚠ 子プロセスから出すので順不同。
+    def report_progress(node, recipe, command, secs)
+      return unless tty?
+      return if stream?
+
+      mark = command.status.zero? ? 'ok' : 'NG'
+      warn "#{mark} #{node} #{recipe} (#{secs.round(1)}s)"
+    end
+
     def report_result(node, recipe, command)
       return unless command.stdout.include?('Recipe:') || command.stderr.present?
       if dry_run?
@@ -122,7 +149,8 @@ module Chubo
         puts create_body(node, recipe, command)
         return
       end
-      puts create_body(node, recipe, command) if single_node?
+      # ⚠ ストリーミングで既に流し終えているものを、整形して二度出さない。
+      puts create_body(node, recipe, command) if single_node? && !stream?
       webhook.post(create_body(node, recipe, command))
     end
 
