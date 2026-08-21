@@ -1,6 +1,11 @@
+require 'ginseng'
 require 'open3'
 require 'timeout'
 require 'facets/time'
+
+# ⚠ `Ginseng::CommandLine` は controller.rb では実行時にしか触らないので require が
+# 要らなかったが、こちらは**継承なので読み込み時に解決される**。ginseng を明示的に
+# require しないと `uninitialized constant Chubo::Ginseng` で落ちる。
 
 module Chubo
   # 実行しながら出力を流す CommandLine（pooza/chubo2#9）。
