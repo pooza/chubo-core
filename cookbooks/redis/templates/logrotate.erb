@@ -1,0 +1,18 @@
+# Ubuntu 素の /etc/logrotate.conf は引数なしの `create`（旧ファイルの所有者を継承）だが、
+# chubo は global に `create 640 root <wheel>` を置いている。パッケージ同梱の
+# /etc/logrotate.d/redis-server は su も create も持たないためこれを拾ってしまい、
+# ローテのたびにログが root:<wheel> 640 で作り直される。redis ユーザーは <wheel> に
+# 入っていないので開けず、**次の再起動で必ず起動失敗する**（pooza/chubo2#202）。
+# ローテ直後は古い fd で動き続けるため、装填と発火がずれて原因が見えにくい。
+/var/log/redis/redis-server*.log {
+  weekly
+  rotate 12
+  missingok
+  notifempty
+  compress
+  # redis は SIGHUP でログを開き直さないので copytruncate を使う。
+  # これが無いと新ログは 0 バイトのまま、実体は *.log.1 に書かれ続ける。
+  copytruncate
+  su redis <%= node.dig('wheel', 'group') %>
+  create 660 redis <%= node.dig('wheel', 'group') %>
+}
