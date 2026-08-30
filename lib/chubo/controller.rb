@@ -27,7 +27,10 @@ module Chubo
         report_result(node, recipe, command)
       end
     ensure
-      FileUtils.rm_f(data['path'])
+      # ⚠ node データの構築そのものが落ちると data が nil のままここへ来る。
+      # 素で参照すると NoMethodError が本来の例外を覆い隠し、**何が悪いのか
+      # 読めないまま落ちる**（廃止キーの検出を入れて実際に踏んだ）。
+      FileUtils.rm_f(data['path']) if data.is_a?(Hash) && data['path']
     end
 
     # 端末に向いているか。⚠⚠ **進捗表示はここが真のときだけ**にする。
