@@ -1,9 +1,14 @@
-exit unless node.dig('ruby', 'version')
+# rbenv でビルドする Ruby。⚠⚠ **宣言が無ければ何もしないのが正しい振る舞い。**
+# 以前は `ruby.version` を見ており、**書かないノードには platform 既定の `3.4` が降ってきて**、
+# 「system ruby のままにしたい」という意図と逆に **本番 shallu の Mastodon の Ruby を
+# 入れ替える**ところだった（pooza/chubo2#71）。`ruby.rbenv.version` は rbenv 専用なので、
+# 書いていない ＝ system ruby のまま、が初めて成立する。
+exit unless node.dig('ruby', 'rbenv', 'version')
 
 deployer = node.dig('deployer', 'user')
 home = "/home/#{deployer}"
-version = node.dig('ruby', 'version').to_s
-global = (node.dig('ruby', 'global') || version).to_s
+version = node.dig('ruby', 'rbenv', 'version').to_s
+global = (node.dig('ruby', 'rbenv', 'global') || version).to_s
 
 # YJIT を有効化するため Rust を先に用意してから rbenv でビルドする。
 # rbenv install は not_if で「YJIT 有効なら実行しない」＝ YJIT 無効ビルドは --force で作り直す。

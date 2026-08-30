@@ -87,6 +87,32 @@ module Chubo
       return @users
     end
 
+    # ⚠⚠ **廃止した宣言が残っていたら、黙って無視せずここで落とす。**
+    # `ruby.version` は「pkg / ports の版」と「rbenv でビルドする版」の 2 つの局面を
+    # 1 つのキーに背負わせていて、**いつ流したかで意味が変わる ＝ 原理的に冪等にならない**
+    # （pooza/chubo2#71）。`ruby.system.version` / `ruby.rbenv.version` に分けたので、
+    # 旧キーのまま流すと「宣言したのに効かない」が黙って再発する。
+    # `rbenv.global` / `rbenv.versions` はどの cookbook からも読まれていない死んだ宣言。
+    # ⚠ `rbenv.enable` は生きている（zsh / bash の shell 初期化テンプレートが読む）。
+    LEGACY_NODE_KEYS = {
+      ['ruby', 'version'] =>
+        'ruby.system.version（pkg / ports の版）と ruby.rbenv.version（rbenv でビルドする版）へ分割',
+      ['ruby', 'global'] => 'ruby.rbenv.global',
+      ['rbenv', 'global'] => '廃止。どの cookbook からも読まれていない（ruby.rbenv.global を使う）',
+      ['rbenv', 'versions'] => '廃止。どの cookbook からも読まれていない（ruby.rbenv.version を使う）',
+    }.freeze
+
+    def validate_node_data(data, name)
+      errors = LEGACY_NODE_KEYS.filter_map do |keys, hint|
+        next unless data.dig(*keys)
+
+        "#{name}: 廃止された宣言 `#{keys.join('.')}` が残っている → #{hint}"
+      end
+      return if errors.empty?
+
+      raise "#{errors.join("\n")}\n(pooza/chubo2#71)"
+    end
+
     def create_node_data(name)
       node_data = YAML.load_file(File.join(Environment.dir, 'config/node', "#{name}.yaml"))
       platform = node_data['platform']
@@ -96,6 +122,7 @@ module Chubo
       data['users'] = users
       data.deep_merge!(node_data)
       data.deep_merge!(YAML.load_file(File.join(Environment.dir, 'config/local.yaml')))
+      validate_node_data(data, name)
       return data
     end
 

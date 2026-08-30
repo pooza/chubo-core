@@ -1,3 +1,4 @@
 OPTIONS_UNSET=X11
-RUBY_VER=<%= node.dig('ruby', 'version') %>
-DEFAULT_VERSIONS=ruby=<%= node.dig('ruby', 'version') %> python=<%= node.dig('python', 'version') %>
+<%# ⚠ ports の版指定なので 2 桁（3.4）。rbenv の 3 桁（4.0.6）は ports の有効値ではない -%>
+RUBY_VER=<%= node.dig('ruby', 'system', 'version') %>
+DEFAULT_VERSIONS=ruby=<%= node.dig('ruby', 'system', 'version') %> python=<%= node.dig('python', 'version') %>
