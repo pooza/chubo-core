@@ -6,8 +6,8 @@ inherit_gem:
 
 # ⚠⚠ inherit_mode が無いと、下の Exclude / Include は継承した配列を**置換する**
 # （マージされない）。⚠ rubocop は緑のまま通るので気づけない。
-# ⚠ Include は merge に入れない。merge にすると rubocop 既定の Include（Gemfile など）
-#   まで戻ってきて、`**/Gemfile*` の除外と食い違う。**全部書く。**
+# ⚠ Include は merge に入れない。'**/*' が正本の列挙を包含するので、merge にすると
+#   同じものを 2 通りに書くことになる。**全部書く。**
 inherit_mode:
   merge:
     - Exclude
@@ -16,12 +16,19 @@ AllCops:
   Exclude:
     - '**/*.md'
     - '**/*.code-workspace'
-    - '**/Gemfile*'
+    # ⚠⚠ Gemfile は除外しない（正本の Include に入っている。pooza/ginseng-style#80）。
+    #   lock だけ外す。
+    - '**/Gemfile.lock'
     - '**/cookbooks/**/*.erb'
     - LICENSE.txt
   # ⚠ cookbook の Ruby は拡張子を持たないものがあるので '**/*' で拾う。
+  # ⚠⚠ `Gemfile` / `Rakefile` は '**/*' に含まれるのに、**別途書かないと
+  #   `Naming/FileName` が「snake_case にしろ」と言う**。この cop は
+  #   `AllCops/Include` に**明示された**パスだけを見逃す実装で、'**/*' では
+  #   素通りしない（正本が 1 つずつ列挙しているのと同じ理由）。
   Include:
     - '**/*'
+    - '**/Gemfile'
     - '**/Rakefile'
   TargetRubyVersion: 3.4
 # ⚠ 正本は test/**/* を除外している。このリポジトリは test/ を持たず、代わりに
