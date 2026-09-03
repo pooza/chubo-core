@@ -5,6 +5,7 @@ execute "timedatectl set-timezone #{node.timezone}"
 
 include_recipe 'packages'
 include_recipe 'unattended_upgrades'
+include_recipe 'needrestart'
 include_recipe 'ssh'
 include_recipe 'cron'
 include_recipe 'logging'

@@ -1,0 +1,16 @@
+# ⚠ chubo が生成する。手で編集しない（cookbooks/ubuntu/needrestart.rb）。
+#
+# 無人更新（needrestart の APT フック）で自動再起動させないサービス。
+# ⚠⚠ **ここに挙げたものは更新した共有ライブラリを掴み直さない。**
+# `needrestart -r l` で再起動待ちを一覧し、計画再起動で畳むこと。
+#
+# 🔴 **代入ではなくマージする。**`$nrconf{override_rc} = {...}` と書くと、
+# needrestart.conf 本体の既定（dbus / ディスプレイマネージャ等）を丸ごと捨てる。
+%{$nrconf{override_rc}} = (
+    %{$nrconf{override_rc}},
+<% @services.each do |name| -%>
+    qr(^<%= name %>) => 0,
+<% end -%>
+);
+
+1;

@@ -22,11 +22,29 @@ module Chubo
       data['path'] = create_node_file(data)
       recipes.each do |recipe|
         command = create_command(data, recipe)
-        command.exec
+        secs = Time.elapse {command.exec}
+        report_progress(node, recipe, command, secs)
         report_result(node, recipe, command)
       end
     ensure
-      FileUtils.rm_f(data['path'])
+      # ⚠ node データの構築そのものが落ちると data が nil のままここへ来る。
+      # 素で参照すると NoMethodError が本来の例外を覆い隠し、**何が悪いのか
+      # 読めないまま落ちる**（廃止キーの検出を入れて実際に踏んだ）。
+      FileUtils.rm_f(data['path']) if data.is_a?(Hash) && data['path']
+    end
+
+    # 端末に向いているか。⚠⚠ **進捗表示はここが真のときだけ**にする。
+    # `tools/drift-sweep.rb` のように出力を捕まえて機械的に読む側がいるので、
+    # パイプに向けたときの挙動は従来と 1 バイトも変えない（pooza/chubo2#9）。
+    def tty?
+      return $stderr.tty?
+    end
+
+    # ⚠ dry-run では流さない。**dry-run の値は整形済みの報告のほう**にあり
+    # （ドリフト棚卸し・pooza/chubo2#121）、生ログを重ねても読みにくくなるだけ。
+    # 長いのは ruby のビルドや pkg update ＝ 実適用の側。
+    def stream?
+      return tty? && single_node? && !dry_run?
     end
 
     def webhook
@@ -72,6 +90,32 @@ module Chubo
       return @users
     end
 
+    # ⚠⚠ **廃止した宣言が残っていたら、黙って無視せずここで落とす。**
+    # `ruby.version` は「pkg / ports の版」と「rbenv でビルドする版」の 2 つの局面を
+    # 1 つのキーに背負わせていて、**いつ流したかで意味が変わる ＝ 原理的に冪等にならない**
+    # （pooza/chubo2#71）。`ruby.system.version` / `ruby.rbenv.version` に分けたので、
+    # 旧キーのまま流すと「宣言したのに効かない」が黙って再発する。
+    # `rbenv.global` / `rbenv.versions` はどの cookbook からも読まれていない死んだ宣言。
+    # ⚠ `rbenv.enable` は生きている（zsh / bash の shell 初期化テンプレートが読む）。
+    LEGACY_NODE_KEYS = {
+      ['ruby', 'version'] =>
+        'ruby.system.version（pkg / ports の版）と ruby.rbenv.version（rbenv でビルドする版）へ分割',
+      ['ruby', 'global'] => 'ruby.rbenv.global',
+      ['rbenv', 'global'] => '廃止。どの cookbook からも読まれていない（ruby.rbenv.global を使う）',
+      ['rbenv', 'versions'] => '廃止。どの cookbook からも読まれていない（ruby.rbenv.version を使う）',
+    }.freeze
+
+    def validate_node_data(data, name)
+      errors = LEGACY_NODE_KEYS.filter_map do |keys, hint|
+        next unless data.dig(*keys)
+
+        "#{name}: 廃止された宣言 `#{keys.join('.')}` が残っている → #{hint}"
+      end
+      return if errors.empty?
+
+      raise "#{errors.join("\n")}\n(pooza/chubo2#71)"
+    end
+
     def create_node_data(name)
       node_data = YAML.load_file(File.join(Environment.dir, 'config/node', "#{name}.yaml"))
       platform = node_data['platform']
@@ -81,6 +125,7 @@ module Chubo
       data['users'] = users
       data.deep_merge!(node_data)
       data.deep_merge!(YAML.load_file(File.join(Environment.dir, 'config/local.yaml')))
+      validate_node_data(data, name)
       return data
     end
 
@@ -101,6 +146,8 @@ module Chubo
       ]
       args.push('--dry-run') if dry_run?
       args.push(find_recipe(recipe))
+      return StreamCommandLine.new(args) if stream?
+
       return Ginseng::CommandLine.new(args)
     end
 
@@ -114,6 +161,16 @@ module Chubo
       raise "Recipe not found: #{recipe}"
     end
 
+    # 複数ノードを並列で回している間は、どのノードのどのレシピが終わったのかが
+    # 全く分からない（報告は最後にまとめて出る）。⚠ 子プロセスから出すので順不同。
+    def report_progress(node, recipe, command, secs)
+      return unless tty?
+      return if stream?
+
+      mark = command.status.zero? ? 'ok' : 'NG'
+      warn "#{mark} #{node} #{recipe} (#{secs.round(1)}s)"
+    end
+
     def report_result(node, recipe, command)
       return unless command.stdout.include?('Recipe:') || command.stderr.present?
       if dry_run?
@@ -122,7 +179,8 @@ module Chubo
         puts create_body(node, recipe, command)
         return
       end
-      puts create_body(node, recipe, command) if single_node?
+      # ⚠ ストリーミングで既に流し終えているものを、整形して二度出さない。
+      puts create_body(node, recipe, command) if single_node? && !stream?
       webhook.post(create_body(node, recipe, command))
     end
 
