@@ -1,0 +1,48 @@
+#!/usr/sbin/nft -f
+#
+# ⚠ このファイルは itamae が生成する。手で編集しても次の適用で上書きされる。
+#   chubo-core: cookbooks/nftables/templates/nftables.conf.erb
+#   宣言は node yaml の nftables.allow
+#
+# input は policy drop。**ここに書いた allow だけが入ってくる。**
+
+flush ruleset
+
+table inet filter {
+	chain input {
+		type filter hook input priority filter; policy drop;
+
+		iif lo accept
+		ct state established,related accept
+		ct state invalid drop
+
+		# ⚠ ICMP を落とすと PMTU 探索が壊れる。IPv6 は近隣探索も乗るので必須。
+		meta l4proto icmp accept
+		meta l4proto ipv6-icmp accept
+<%- @rules.each do |rule| -%>
+
+<%- unless rule[:comment].empty? -%>
+		# <%= rule[:comment] %>
+<%- end -%>
+<%- if rule[:v4].empty? && rule[:v6].empty? -%>
+		<%= rule[:proto] %> dport <%= rule[:port] %> accept
+<%- else -%>
+<%- unless rule[:v4].empty? -%>
+		ip saddr { <%= rule[:v4].join(', ') %> } <%= rule[:proto] %> dport <%= rule[:port] %> accept
+<%- end -%>
+<%- unless rule[:v6].empty? -%>
+		ip6 saddr { <%= rule[:v6].join(', ') %> } <%= rule[:proto] %> dport <%= rule[:port] %> accept
+<%- end -%>
+<%- end -%>
+<%- end -%>
+	}
+
+	chain forward {
+		type filter hook forward priority filter; policy drop;
+	}
+
+	# ⚠ 出ていく通信は絞らない。cron の外部取得・rclone・apt が全部ここを通る。
+	chain output {
+		type filter hook output priority filter; policy accept;
+	}
+}
