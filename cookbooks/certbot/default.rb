@@ -22,7 +22,7 @@ package certbot_package
 # `test -d live/<domain>` だけを見ると、不要な lineage をもう 1 本作ってしまう）。
 letsencrypt_dir = node.platform == 'freebsd' ? '/usr/local/etc/letsencrypt' : '/etc/letsencrypt'
 webroot = node.dig('certbot', 'webroot') ||
-          (node.platform == 'freebsd' ? '/usr/local/www/nginx' : '/var/www/html')
+  (node.platform == 'freebsd' ? '/usr/local/www/nginx' : '/var/www/html')
 email = node.dig('wheel', 'email')
 
 (node.dig('certbot', 'domains') || []).each do |domain|
@@ -30,7 +30,7 @@ email = node.dig('wheel', 'email')
     command "certbot certonly --webroot -n -w #{webroot} -d #{domain} -m #{email} --agree-tos"
     # ⚠ not_if は 1 つしか持てない（2 回書くと後ろが前を上書きする）ので || で繋ぐ。
     not_if %(test -d #{letsencrypt_dir}/live/#{domain} || ) +
-           %(certbot certificates 2>/dev/null | tr -s ' ' '\\n' | grep -qFx '#{domain}')
+      %(certbot certificates 2>/dev/null | tr -s ' ' '\\n' | grep -qFx '#{domain}')
   end
 end
 
