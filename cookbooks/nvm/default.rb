@@ -19,7 +19,7 @@ package 'curl'
 # itamae の execute は environment 属性を持たないため env はコマンドに前置する。
 execute "install nvm for #{deployer}" do
   command %(HOME=#{home} PROFILE=/dev/null bash -c ) +
-          %('curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/#{revision}/install.sh | bash')
+    %('curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/#{revision}/install.sh | bash')
   user deployer
   not_if "test -s #{nvm_dir}/nvm.sh"
 end

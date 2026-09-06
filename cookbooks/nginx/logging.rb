@@ -38,10 +38,10 @@ end
 retention_days = node.dig('nginx', 'access_log_retention_days').to_i
 # ⚠ FreeBSD は periodic の実行順を数字で決める。圧縮（901）より後に置く。
 cleanup_script = if node.platform == 'freebsd'
-                   '/usr/local/etc/periodic/daily/910.nginx-access-log-cleanup'
-                 else
-                   '/etc/cron.daily/nginx-access-log-cleanup'
-                 end
+  '/usr/local/etc/periodic/daily/910.nginx-access-log-cleanup'
+else
+  '/etc/cron.daily/nginx-access-log-cleanup'
+end
 
 if retention_days.positive?
   template cleanup_script do
