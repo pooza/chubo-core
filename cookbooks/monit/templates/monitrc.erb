@@ -1,4 +1,7 @@
-set daemon 30
+# 起動猶予が無いと、boot 直後の初回チェックが rc.d の起動と競合し、まだ立ち上がって
+# いないデーモンへ start を撃って二重起動させる（pooza/chubo-core#37）。
+# gomander の実測では monit 起動が boot +16 秒、最も遅い mastodon-puma の着地が約 36 秒。
+set daemon 30 with start delay <%= node.dig('monit', 'start_delay') || 120 %>
 set log syslog
 set httpd port 2812 and
   allow localhost
