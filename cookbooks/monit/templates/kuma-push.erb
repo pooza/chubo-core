@@ -24,7 +24,8 @@ BASE='<%= @base %>'
 # 2 番目のフィールドが Status 列の先頭になる。`OK` 以外はすべて異常として拾う
 # （`Does not exist` / `Resource limit matched` などは複数語だが、先頭語で判別できる）。
 # ⚠ 先頭 2 行は「Monit x.y uptime: ...」とヘッダなので落とす。
-bad=$(monit summary -B 2>/dev/null | awk 'NR > 2 && $2 != "OK" { printf "%s(%s) ", $1, $2 }')
+bad=$(monit summary -B 2>/dev/null \
+  | awk 'NR > 2 && $2 != "OK" { printf "%s%s(%s)", sep, $1, $2; sep = " " }')
 
 if [ -z "${bad}" ]; then
   status=up
