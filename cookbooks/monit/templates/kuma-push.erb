@@ -1,0 +1,42 @@
+#!/bin/sh
+# ⚠ chubo が生成する。手で編集しない（cookbooks/monit/freebsd.rb）。
+#
+# monit の総合状態を Uptime Kuma の push モニタへ送る（pooza/chubo2#244）。
+#
+# ⚠⚠ **monit の `then alert` には宛先が無い。**そのため
+# **2026-08-04（gomander）と 2026-09-17（shallu）の 2 回、ディスク満杯を取り逃がした。**
+# syslog には 30 秒おきに出ていたが、誰にも届いていない。
+#
+# 🔴 **push モニタは「ハートビートが途切れたら DOWN」という向き。**
+# だから失敗時だけ送るのでは足りず、**正常時も送る**。
+# ⚠ これは欠点ではなく利点で、**monit 自身が死んだ / ノードが落ちた場合も DOWN になる。**
+# `then alert` は monit が生きていることが前提だが、こちらはその前提も監視できる。
+#
+# ⚠ `periodic frequently`（*/5）から走るので送信間隔は 5 分。
+#   Kuma 側の interval も 300s に揃えてある（ずれると 1 回の取りこぼしが DOWN になる）。
+
+set -u
+
+TOKEN='<%= @token %>'
+BASE='<%= @base %>'
+
+# ⚠⚠ **status は $2 で見る。**サービス名に空白は入れていないので、
+# 2 番目のフィールドが Status 列の先頭になる。`OK` 以外はすべて異常として拾う
+# （`Does not exist` / `Resource limit matched` などは複数語だが、先頭語で判別できる）。
+# ⚠ 先頭 2 行は「Monit x.y uptime: ...」とヘッダなので落とす。
+bad=$(monit summary -B 2>/dev/null | awk 'NR > 2 && $2 != "OK" { printf "%s(%s) ", $1, $2 }')
+
+if [ -z "${bad}" ]; then
+  status=up
+  msg=OK
+else
+  status=down
+  msg="${bad}"
+fi
+
+# ⚠ 失敗しても periodic 全体を落とさない。届かないこと自体は
+#   Kuma 側でハートビート切れとして検知される。
+curl -fsS --max-time 20 --get \
+  --data-urlencode "status=${status}" \
+  --data-urlencode "msg=${msg}" \
+  "${BASE}/${TOKEN}" > /dev/null 2>&1 || exit 0

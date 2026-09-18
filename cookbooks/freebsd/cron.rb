@@ -41,7 +41,10 @@ template '/etc/periodic.conf' do
   mode '0644'
 end
 
-['hourly', 'daily', 'weekly', 'monthly'].each do |period|
+# ⚠ **`frequently` も作る。**`/etc/crontab` に `*/5 * * * * root periodic frequently` が
+# あるのにこのディレクトリだけ無かったので、**5 分ごとの枠が使えなかった**
+# （pooza/chubo2#244 で Kuma へのハートビートを置くときに発覚）。
+['frequently', 'hourly', 'daily', 'weekly', 'monthly'].each do |period|
   directory File.join('/usr/local/etc/periodic', period) do
     owner 'root'
     group node.dig('sudo', 'group')

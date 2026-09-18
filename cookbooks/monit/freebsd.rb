@@ -52,6 +52,35 @@ processes.each do |name, config|
   end
 end
 
+# ⚠⚠ **monit の `then alert` には宛先が無い（pooza/chubo2#244）。**
+# `monitrc` に `set mailserver` も `set alert` も無いので、`then alert` と書いたルールは
+# **syslog へ出すだけで誰にも届かない。**そのため
+# **2026-08-04（gomander）と 2026-09-17（shallu）の 2 回、ディスク満杯を取り逃した。**
+#
+# 宛先は Uptime Kuma の push モニタにした。Kuma には Matrix / SendGrid の通知が
+# 既に配線されており、**実際に見られている経路**だから。
+# ⚠ メールも届くが、periodic の root 宛メールは同じ経路で届いていたのに
+#   2 回とも誰も気づかなかった。**出ても読まれないものを増やさない。**
+#
+# ⚠ `monit.kuma_push_token` を宣言したノードだけ。
+#   トークンは `tools/kuma-register-monit.py --apply`（chubo2）が発行する。
+token = node.dig('monit', 'kuma_push_token')
+
+if token
+  # ⚠ periodic frequently は `*/5 * * * *`。Kuma 側の interval（300s）と揃えてある。
+  template '/usr/local/etc/periodic/frequently/950.kuma-push-monit' do
+    source 'templates/kuma-push.erb'
+    owner 'root'
+    group node.dig('root', 'group')
+    # ⚠ push URL はそれ自体が資格情報なので 0700。
+    mode '0700'
+    variables(
+      token:,
+      base: node.dig('monit', 'kuma_push_base') || 'https://uptime.b-shock.org/api/push',
+    )
+  end
+end
+
 execute 'sysrc monit_enable="YES"'
 service 'monit' do
   action [:start, :restart]
