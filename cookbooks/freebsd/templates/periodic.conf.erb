@@ -21,3 +21,15 @@ daily_status_zfs_enable="YES"
 daily_zfs_snapshot_enable="YES"
 daily_zfs_snapshot_pools="zroot/home"
 daily_zfs_snapshot_keep="10"
+
+<% if node.dig('certbot', 'enable') -%>
+<%# ⚠⚠ **certbot の週次更新はここが持つ（pooza/chubo2#245）。**
+    以前は certbot cookbook が `sysrc -f /etc/periodic.conf` で**追記**していたが、
+    このファイルはテンプレートで**全置換**されるので、
+    🔴 **`--recipes=freebsd/cron` を後から流すと証明書の更新が黙って止まっていた。**
+    エラーにならず、失効するまで表に出ない。**書き手を 1 つにした。** -%>
+
+# certbot
+weekly_certbot_enable="YES"
+weekly_certbot_deploy_hook="<%= node.dig('certbot', 'deploy_hook') || 'service nginx onereload' %>"
+<% end -%>

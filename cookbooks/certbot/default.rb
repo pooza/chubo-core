@@ -1,6 +1,5 @@
 exit unless node.dig('certbot', 'enable')
 
-deploy_hook = node.dig('certbot', 'deploy_hook') || 'service nginx onereload'
 certbot_package = node.dig('certbot', 'package') || 'certbot'
 
 package certbot_package
@@ -34,16 +33,14 @@ email = node.dig('wheel', 'email')
   end
 end
 
+# ⚠⚠ **FreeBSD の週次更新はここでは書かない（pooza/chubo2#245）。**
+# 以前は `sysrc -f /etc/periodic.conf weekly_certbot_*` で**追記**していたが、
+# `/etc/periodic.conf` は `freebsd/cron` がテンプレートで**全置換**する。
+# 🔴 **書き手が 2 つあったため、`--recipes=freebsd/cron` を後から流すだけで
+# 証明書の自動更新が黙って止まっていた**（エラーにならず、失効するまで表に出ない）。
+# 現在は `freebsd/cron` の `periodic.conf.erb` が `certbot.enable` を見て生成する。
+# ⚠ 値を変えるなら `certbot.deploy_hook`。
 case node.platform
-when 'freebsd'
-  execute 'enable weekly certbot' do
-    command 'sysrc -f /etc/periodic.conf weekly_certbot_enable="YES"'
-    not_if 'grep -q \'weekly_certbot_enable="YES"\' /etc/periodic.conf'
-  end
-
-  execute 'set certbot deploy hook' do
-    command "sysrc -f /etc/periodic.conf weekly_certbot_deploy_hook=\"#{deploy_hook}\""
-  end
 when 'ubuntu'
   template '/etc/cron.weekly/certbot' do
     source 'templates/certbot.sh.erb'
