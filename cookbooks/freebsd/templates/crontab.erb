@@ -14,6 +14,10 @@ CRON=1
 <%# ⚠ 分は rand ではなくノード名から決定的に導く。理由は cron.rb を参照（pooza/chubo2#121）。 -%>
 */5 * * * * root periodic frequently
 <%= @minutes['hourly'] %> * * * * root periodic hourly
-<%= @minutes['daily'] %> 3 * * * root periodic daily
-<%= @minutes['weekly'] %> 2 * * 6 root periodic weekly
-<%= @minutes['monthly'] %> 1 1 * * root periodic monthly
+<%# ⚠⚠ daily / weekly / monthly は anacron へ一本化した（pooza/chubo2#243）。anacron が入っている間ここは空振りし、
+    実行は /usr/local/etc/anacrontab が担う。**両方が生きていた頃は 3 台とも 1 日 2 回
+    走っており**、postgresql_dump と google_drive_backup が二重に払われていた。
+    Debian の run-parts と同じガードの形にしてあるので、anacron を外しても periodic は止まらない。 -%>
+<%= @minutes['daily'] %> 3 * * * root test -x /usr/local/sbin/anacron || periodic daily
+<%= @minutes['weekly'] %> 2 * * 6 root test -x /usr/local/sbin/anacron || periodic weekly
+<%= @minutes['monthly'] %> 1 1 * * root test -x /usr/local/sbin/anacron || periodic monthly
