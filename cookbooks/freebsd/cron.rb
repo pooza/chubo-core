@@ -4,8 +4,12 @@ require 'digest/md5'
 
 # ⚠⚠ **anacron は入れない。**経緯と理由は crontab.erb の先頭へ書いた
 # （pooza/chubo2#243）。一度入れてしまったので、明示的に外す。
-package 'anacron' do
-  action :remove
+# ⚠ **`package ... action :remove` は使えない。**specinfra の
+# `Specinfra::Command::Freebsd::Base::Package` に remove が実装されておらず、
+# NotImplementedError でレシピがその場で止まる。
+# ⚠⚠ **dry-run では再現しない**（action を実行しないので通ってしまう）。
+execute 'pkg delete -y anacron' do
+  only_if 'pkg info anacron > /dev/null 2>&1'
 end
 
 file '/usr/local/etc/anacrontab' do
