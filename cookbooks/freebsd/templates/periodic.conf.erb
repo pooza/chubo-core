@@ -28,7 +28,6 @@ daily_zfs_snapshot_keep="10"
     このファイルはテンプレートで**全置換**されるので、
     🔴 **`--recipes=freebsd/cron` を後から流すと証明書の更新が黙って止まっていた。**
     エラーにならず、失効するまで表に出ない。**書き手を 1 つにした。** -%>
-
 # certbot
 weekly_certbot_enable="YES"
 weekly_certbot_deploy_hook="<%= node.dig('certbot', 'deploy_hook') || 'service nginx onereload' %>"
