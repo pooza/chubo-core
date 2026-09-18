@@ -2,7 +2,15 @@ exit unless node.platform == 'freebsd'
 
 require 'digest/md5'
 
-package 'anacron'
+# ⚠⚠ **anacron は入れない。**経緯と理由は crontab.erb の先頭へ書いた
+# （pooza/chubo2#243）。一度入れてしまったので、明示的に外す。
+package 'anacron' do
+  action :remove
+end
+
+file '/usr/local/etc/anacrontab' do
+  action :delete
+end
 
 # ⚠⚠ **分は rand ではなくノード名から決定的に導く。**元は `rand(0..59)` だったが、
 # ERB は**レンダするたび別の値**を出すので、`/etc/crontab` が常に「差分あり」になり、
@@ -19,22 +27,6 @@ template '/etc/crontab' do
   owner 'root'
   group node.dig('wheel', 'group')
   mode '0644'
-  variables(minutes: minutes)
-end
-
-# ⚠⚠ **anacrontab も宣言から生成する。**以前は package の既定のままで、
-# `/etc/crontab` 側と anacron 側の**両方が `periodic daily/weekly/monthly` を持っていた**。
-# FreeBSD の Mastodon 3 台では daily の道具が丸ごと 1 日 2 回走っており、
-# postgresql_dump が同じパスを 2 回書き、google_drive_backup の rclone sync も 2 回走っていた
-# （pooza/chubo2#243）。crontab.erb 側を anacron の有無でガードし、実行はこちらへ寄せた。
-#
-# ⚠ delay に cron と同じノード由来の分を使うので、anacron へ寄せても
-#   全機が 00:0x に固まらない（スタガーは保たれる）。
-template '/usr/local/etc/anacrontab' do
-  source 'templates/anacrontab.erb'
-  owner 'root'
-  group node.dig('wheel', 'group')
-  mode '0600'
   variables(minutes: minutes)
 end
 

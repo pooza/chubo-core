@@ -7,17 +7,23 @@ CRON=1
 
 */1 * * * * root /usr/libexec/atrun
 */11 * * * * root /usr/libexec/save-entropy
-*/5 * * * * root anacron
 1,31 0-5 * * * root adjkerntz -a
 0 * * * * root newsyslog
 
 <%# ⚠ 分は rand ではなくノード名から決定的に導く。理由は cron.rb を参照（pooza/chubo2#121）。 -%>
 */5 * * * * root periodic frequently
 <%= @minutes['hourly'] %> * * * * root periodic hourly
-<%# ⚠⚠ daily / weekly / monthly は anacron へ一本化した（pooza/chubo2#243）。anacron が入っている間ここは空振りし、
-    実行は /usr/local/etc/anacrontab が担う。**両方が生きていた頃は 3 台とも 1 日 2 回
-    走っており**、postgresql_dump と google_drive_backup が二重に払われていた。
-    Debian の run-parts と同じガードの形にしてあるので、anacron を外しても periodic は止まらない。 -%>
-<%= @minutes['daily'] %> 3 * * * root test -x /usr/local/sbin/anacron || periodic daily
-<%= @minutes['weekly'] %> 2 * * 6 root test -x /usr/local/sbin/anacron || periodic weekly
-<%= @minutes['monthly'] %> 1 1 * * root test -x /usr/local/sbin/anacron || periodic monthly
+<%# ⚠⚠ **anacron は入れない（pooza/chubo2#243）。**
+    このテンプレートは 2025-05-28 に ubuntu/cron から写したもので、
+    向こうの `test -x /usr/sbin/anacron || run-parts ...` は **Debian 標準の
+    /etc/crontab の定型**だった。写すときに**ガードだけ落ちて
+    `*/5 * * * * root anacron` の行だけが残り**、後からその行を動かすために
+    `package 'anacron'` が足された（2025-06-01）。**目的から入ったものではない。**
+    結果、cron と anacron の両方が periodic を持ち、**FreeBSD 10 台全部で
+    daily / weekly / monthly が 1 日 2 回走っていた**。
+    ⚠ 取りこぼしを拾う価値は「daily の窓に停止が重なる」場合だけで、
+    ここは常時稼働の VM。拾う仕組みより**欠けたときに気づく仕組み**
+    （monit の free_min と Sentry）のほうが要る。 -%>
+<%= @minutes['daily'] %> 3 * * * root periodic daily
+<%= @minutes['weekly'] %> 2 * * 6 root periodic weekly
+<%= @minutes['monthly'] %> 1 1 * * root periodic monthly
