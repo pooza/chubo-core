@@ -20,5 +20,20 @@ Unattended-Upgrade::Package-Blacklist {
 <% end -%>
 };
 
-// 既定も false だが、暗黙に頼らず明示する。
+// ⚠⚠ **既定は false。**暗黙に頼らず明示する。
+//
+// ⚠ `automatic_reboot` を宣言したノードだけ true になる。
+// **platform の既定に置かないこと。**全台に降らせると、
+// **同じ刻限に全機が一斉に落ちる**（pooza/chubo2#204 で 53 分止めたのと同じ型の事故。
+// あのときの実行主体は needrestart だったが、**一斉に落ちる**という形は同じ）。
+//
+// ⚠ 入れてよいのは**単機能・ステートレスで、利用者が直接見ていない箱**だけ。
+// DB や ZFS を持つ機、利用者に見える機は宣言しない。
+// 入れない機の見守りは `tools/reboot-sweep.rb`（chubo2）。
+<% if @config['automatic_reboot'] -%>
+Unattended-Upgrade::Automatic-Reboot "true";
+// ⚠⚠ **刻限は実測で決める。**「深夜なら空いているだろう」で決めないこと。
+Unattended-Upgrade::Automatic-Reboot-Time "<%= @config['automatic_reboot_time'] || '04:00' %>";
+<% else -%>
 Unattended-Upgrade::Automatic-Reboot "false";
+<% end -%>
