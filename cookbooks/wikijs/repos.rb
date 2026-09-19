@@ -3,8 +3,20 @@ exit unless node.dig('wikijs', 'enable')
 dir = node.dig('wikijs', 'path')
 dir.gsub!('__USER__', node.dig('deployer', 'user'))
 
+# ⚠⚠ **共有リポジトリは、追随していない側では「上げる」変更になる**
+# （pooza/chubo2#225）。`THE-POWERNEWS/uptime-kuma-docker` は chubo2 と
+# writersbase-env が同じものを指しており、**片方が「動くタグを固定する」commit を
+# 入れると、古い clone を持つもう片方では次にレシピを流した瞬間にメジャーが上がる。**
+# 宣言を 1 行も変えていないのに動く、というのが危ないところ。
+#
+# ⚠ **`revision` を宣言できるようにしてある。**指定しなければ従来どおり既定ブランチの
+# 先端に追随する（既存ノードの挙動は変わらない）。**共有リポジトリを指すノードでは
+# 刺しておくと、上流の commit が勝手に効かない。**
+revision = node.dig('wikijs', 'revision')
+
 git dir do
   repository node.dig('wikijs', 'repos')
+  revision revision if revision
   user node.dig('deployer', 'user')
 end
 
