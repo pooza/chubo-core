@@ -77,6 +77,9 @@ if token
     variables(
       token:,
       base: node.dig('monit', 'kuma_push_base') || 'https://uptime.b-shock.org/api/push',
+      # ⚠ 再起動待ちで DOWN にするまでの日数（pooza/chubo2#227）。
+      # `tools/reboot-sweep.rb` の STALE_DAYS と揃えてある。
+      reboot_stale_days: node.dig('monit', 'reboot_stale_days') || 42,
     )
   end
 end

@@ -27,12 +27,43 @@ BASE='<%= @base %>'
 bad=$(monit summary -B 2>/dev/null \
   | awk 'NR > 2 && $2 != "OK" { printf "%s%s(%s)", sep, $1, $2; sep = " " }')
 
-if [ -z "${bad}" ]; then
+# ⚠⚠ **再起動待ちも同じ口に乗せる（pooza/chubo2#227）。**
+# `reboot_required` は「失敗」ではないので Sentry には上がらず、
+# **writersBASE 側では 1 年 23 週ぶん黙って育っていた。**単独のモニタを増やすのではなく、
+# ノードの総合状態へ混ぜる（#227 のコメントで両者が合意した形）。
+#
+# ⚠ **FreeBSD には `reboot-required` に相当する仕組みが無い**ので、
+# 導入済みカーネル（`freebsd-version -k`）と稼働中（`uname -r`）の差で見る。
+# ⚠⚠ **`sec` の抽出を `.*sec = ` で書かないこと。**`kern.boottime` は
+# `{ sec = ..., usec = ... }` なので、貪欲マッチが `usec` のほうを拾う
+# （`tools/reboot-sweep.rb` が 2026-09-19 まで同じ誤りで全 FreeBSD を 20,712 日と出していた）。
+installed=$(freebsd-version -k 2>/dev/null)
+running=$(uname -r)
+pending=''
+up_days=0
+if [ -n "${installed}" ] && [ "${installed}" != "${running}" ]; then
+  boot=$(sysctl -n kern.boottime | sed -n 's/^{ *sec = \([0-9]*\).*/\1/p')
+  up_days=$(( ( $(date +%s) - ${boot:-0} ) / 86400 ))
+  pending="要再起動(${running}→${installed}/稼働${up_days}日)"
+fi
+
+# 🔴 **溜まった時点で初めて DOWN にする。**直近の 1 世代で鳴らすと、
+# 「鳴っているが対処しなくてよいもの」を作ることになり、また読まれなくなる。
+# ⚠ しきい値は `tools/reboot-sweep.rb` の A（🔴）と同じ日数に揃えてある。
+# ⚠ 稼働日数は「待っている日数」そのものではない（いつ入ったかは分からない）。
+#   reboot-sweep も同じ近似を使っているので、揃えてある。
+if [ -n "${bad}" ]; then
+  status=down
+  msg="${bad}${pending:+ ${pending}}"
+elif [ -n "${pending}" ] && [ "${up_days}" -ge <%= @reboot_stale_days %> ]; then
+  status=down
+  msg="${pending}"
+elif [ -n "${pending}" ]; then
+  status=up
+  msg="OK ${pending}"
+else
   status=up
   msg=OK
-else
-  status=down
-  msg="${bad}"
 fi
 
 # ⚠ 失敗しても periodic 全体を落とさない。届かないこと自体は
