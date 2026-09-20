@@ -3,6 +3,7 @@ exit unless node.dig('nginx', 'enable')
 include_recipe 'package'
 include_recipe 'config'
 include_recipe 'logging'
+include_recipe 'surge'
 
 # ⚠ **restart はしない。**設定の反映は config.rb の `execute[reload nginx]`（notifies）が持つ。
 # ここは「落ちていれば起動する」だけ。起動時に新しい設定が読まれるので、

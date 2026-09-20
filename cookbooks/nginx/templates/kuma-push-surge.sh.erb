@@ -1,0 +1,103 @@
+#!/bin/sh
+# ⚠ chubo が生成する。手で編集しない（cookbooks/nginx/surge.rb）。
+#
+# nginx のアクセス急増を Uptime Kuma の push モニタへ送る（pooza/chubo2#118）。
+#
+# ⚠⚠ **2026-08-02 の分散ボットと同じものが 2026-09-21 にも動いていたのに、
+# 6 日以上だれも気づいていなかった。**504 が出ないうちは monit にも外形監視にも乗らず、
+# **可視なのは転送量だけ**だった。これはその穴だけを塞ぐもので、遮断はしない。
+#
+# 🔴 **push モニタは「ハートビートが途切れたら DOWN」という向き。**
+# だから急増時だけ送るのでは足りず、**平常時も 5 分ごとに送る**。
+# ⚠ これは欠点ではなく利点で、**ノードが落ちた場合も DOWN になる。**
+#
+# ⚠ `periodic frequently`（*/5）から走る。出力は /var/log/frequently.log へ出るので、
+#   正常時は何も書かない。
+
+set -u
+
+TOKEN='<%= @token %>'
+BASE='<%= @base %>'
+MB_MAX=<%= @megabytes %>
+ERR_MAX=<%= @server_errors %>
+STATE=/var/db/chubo/nginx-surge
+WINDOW=5
+
+today=$(date +%Y%m%d)
+month=$(date +%Y/%m)
+
+total_req=0
+total_err=0
+total_bytes=0
+busiest_name=''
+busiest_req=0
+
+for log in /var/log/nginx/*/"${month}"/access_"${today}".log; do
+  [ -f "${log}" ] || continue
+
+  # /var/log/nginx/<vhost>/YYYY/MM/access_YYYYMMDD.log
+  vhost=$(basename "$(dirname "$(dirname "$(dirname "${log}")")")")
+  state="${STATE}/${vhost}"
+  size=$(stat -f %z "${log}" 2>/dev/null) || continue
+
+  # ⚠⚠ **位置を知らないログは数えない。**日が変わった直後や導入直後に頭から数えると、
+  # その日ぶんの累計が 5 分間の値として出て、無条件に DOWN になる。
+  if [ ! -r "${state}" ]; then
+    echo "${size}" > "${state}"
+    continue
+  fi
+
+  prev=$(cat "${state}")
+  echo "${size}" > "${state}"
+
+  # ⚠ ログが回された / 作り直された場合は前回位置のほうが大きくなる。頭から読む。
+  [ "${prev}" -gt "${size}" ] && prev=0
+  [ "${prev}" -eq "${size}" ] && continue
+
+  # ⚠ status は $9、送出バイトは $10（combined）。`-` は awk が 0 として足す。
+  counted=$(tail -c "+$((prev + 1))" "${log}" \
+    | awk '{ n++; if ($9 ~ /^5[0-9][0-9]$/) e++; b += $10 } END { printf "%d %d %d", n, e, b }')
+  req=$(echo "${counted}" | cut -d' ' -f1)
+  err=$(echo "${counted}" | cut -d' ' -f2)
+  bytes=$(echo "${counted}" | cut -d' ' -f3)
+
+  total_req=$((total_req + req))
+  total_err=$((total_err + err))
+  total_bytes=$((total_bytes + bytes))
+
+  if [ "${req}" -gt "${busiest_req}" ]; then
+    busiest_req=${req}
+    busiest_name=${vhost}
+  fi
+done
+
+# ⚠ 日が変わると前日の状態ファイルが残るが、翌日の同名ログで上書きされるので掃除は要らない
+#   （vhost が消えた場合だけ残る。害は無い）。
+
+rpm=$((total_req / WINDOW))
+mb=$((total_bytes / 1048576))
+
+# ⚠⚠ **req/分では鳴らさない。**遮断済みのボットを除いてもなお 11,448 req/分の山が立つ
+# （2026-09-07 10:53・gomander）。正常と異常を req では分けられないので、
+# **鳴らすのは送出量（課金に効く）と 5xx（応答が壊れている）だけ**にして、
+# req/分は msg に出すだけにする。
+if [ "${mb}" -ge "${MB_MAX}" ]; then
+  status=down
+  msg="送出 ${mb} MB/${WINDOW}分 (>= ${MB_MAX})"
+elif [ "${total_err}" -ge "${ERR_MAX}" ]; then
+  status=down
+  msg="5xx ${total_err} 件/${WINDOW}分 (>= ${ERR_MAX})"
+else
+  status=up
+  msg="OK"
+fi
+
+msg="${msg} ${rpm} req/min, 5xx ${total_err}, ${mb} MB/${WINDOW}min"
+[ -n "${busiest_name}" ] && msg="${msg}, 最多 ${busiest_name}"
+
+# ⚠ 失敗しても periodic 全体を落とさない。届かないこと自体は
+#   Kuma 側でハートビート切れとして検知される。
+curl -fsS --max-time 20 --get \
+  --data-urlencode "status=${status}" \
+  --data-urlencode "msg=${msg}" \
+  "${BASE}/${TOKEN}" > /dev/null 2>&1 || exit 0
