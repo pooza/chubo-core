@@ -13,15 +13,21 @@ exit unless node.dig('nginx', 'enable')
 #
 # ⚠ 送信は `periodic frequently`（*/5）。Kuma 側の interval も 300s に揃えること
 #   （ずれると 1 回の取りこぼしがそのまま DOWN になる。#244 で踏んだ型）。
-# ⚠ トークンは `tools/kuma-register-nginx.py --apply`（chubo2）が発行する。
+# ⚠ **`nginx.surge.enable` を宣言したノードだけ。**`nginx.enable` で選ぶと
+#   開発機（dev24 / dev25 / dev26）まで当たる。見張る価値があるのは公開 vhost を
+#   持つノードだけなので、宣言を正典にする。
+# ⚠ トークンは `tools/kuma-register-nginx.py --apply`（chubo2）が発行する
+#   （宣言 → 登録 → トークンを宣言へ書き戻す、の 2 段）。
 #
 # ⚠⚠ **FreeBSD だけ。**Ubuntu には `periodic frequently` に相当する 5 分の口が無く、
 #   対象ノード（gomander / shallu / zugoga）はいずれも FreeBSD なので、そちらは作らない。
 #   兄弟（writersbase-env）は Ubuntu なので、この宣言を足しても何も起きない。
-token = node.dig('nginx', 'surge', 'kuma_push_token')
-
-exit unless token
+exit unless node.dig('nginx', 'surge', 'enable')
 exit unless node.platform == 'freebsd'
+
+# ⚠ 宣言はあるがトークンがまだ無い状態（登録前）では何も置かない。
+token = node.dig('nginx', 'surge', 'kuma_push_token')
+exit unless token
 
 directory '/var/db/chubo' do
   owner 'root'
