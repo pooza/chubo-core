@@ -105,6 +105,9 @@ module Chubo
       ['rbenv', 'versions'] => '廃止。どの cookbook からも読まれていない（ruby.rbenv.version を使う）',
     }.freeze
 
+    # config/local.yaml のうち「ノード 1 台に閉じる宣言」を入れる節（pooza/chubo2#252）
+    LOCAL_NODES_KEY = 'nodes'.freeze
+
     def validate_node_data(data, name)
       errors = LEGACY_NODE_KEYS.filter_map do |keys, hint|
         next unless data.dig(*keys)
@@ -124,9 +127,38 @@ module Chubo
       data['nodename'] = name.sub(/\.local$/, '')
       data['users'] = users
       data.deep_merge!(node_data)
-      data.deep_merge!(YAML.load_file(File.join(Environment.dir, 'config/local.yaml')))
+      merge_local_data(data, name)
       validate_node_data(data, name)
       return data
+    end
+
+    # ⚠⚠ **config/local.yaml は素で書くと全ノードへ降る。**1 台にしか要らない資格情報を
+    # 全体設定に置くと、**要らないノード（ステージング含む）にも配られる**
+    # （pooza/chubo2#252 —— 本番の webhook が dev 機 4 台にも入っていた）。
+    # ノード 1 台に閉じる値は `nodes:` の下にノード名（config/node のファイル名）で置く。
+    #
+    # ⚠ ここで対象ノードのぶんだけ取り出し、**`nodes:` の節そのものは必ず消す。**
+    # 残すと itamae へ渡す node データ（tmp/node/*.yaml）に**他ノードの値が入ったまま**
+    # 実機へ届く ＝ 分けた意味が無くなる。
+    def merge_local_data(data, name)
+      local = YAML.load_file(File.join(Environment.dir, 'config/local.yaml'))
+      locals = local.delete(LOCAL_NODES_KEY) || {}
+      validate_local_nodes(locals)
+      data.deep_merge!(local)
+      data.deep_merge!(locals[name]) if locals[name].is_a?(Hash)
+      return data
+    end
+
+    # ⚠ **黙って無視しない。**`nodes:` のキーが config/node のファイル名と食い違っていると
+    # 「宣言したのに効かない」が静かに起きる（廃止キーの検出と同じ理由・pooza/chubo2#71）。
+    def validate_local_nodes(locals)
+      errors = locals.keys.reject do |name|
+        File.exist?(File.join(Environment.dir, 'config/node', "#{name}.yaml"))
+      end
+      return if errors.empty?
+
+      raise "config/local.yaml: nodes に config/node と対応しない宣言がある → #{errors.join(', ')}\n" \
+        '(pooza/chubo2#252)'
     end
 
     def create_node_file(data)
