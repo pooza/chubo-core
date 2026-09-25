@@ -45,8 +45,14 @@ root_group = node.dig('root', 'group')
 
 # writersbase-tools の Gemfile が mysql2 と pg を無条件に要求するため、
 # MySQL クライアントライブラリを入れておく（実際に MySQL を使わなくても必要）
+# ⚠⚠ ただし MySQL のクライアントが既に入っている機体（MySQL サーバーを持つ機体）では入れない。
+# pirazal / pirazis は mysql84-server が動いており、mysql80-client を足すと pkg が衝突を
+# 解くために mysql84-* を巻き込みかねない（pooza/chubo2#256）。gem のビルドは既存の
+# クライアントで足りる。
 native_packages.each do |pkg|
-  package pkg
+  package pkg do
+    not_if "pkg info -q -g 'mysql*-client'" if pkg.start_with?('mysql')
+  end
 end
 
 # 後段の bundle install / rake install は root の system ruby から bundler を呼ぶが、
