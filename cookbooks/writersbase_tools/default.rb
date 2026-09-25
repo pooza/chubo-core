@@ -19,7 +19,10 @@ when 'freebsd'
   rsyslog_conf = "/usr/local/etc/rsyslog.d/#{package_name}.conf"
   newsyslog_conf = "/usr/local/etc/newsyslog.conf.d/#{package_name}.conf"
   rsyslog_service = 'rsyslogd'
-  native_packages = ['mysql80-client']
+  # bash は mysql_dump / postgresql_dump がパイプの失敗を拾うために使う。freebsd/deployer も
+  # 入れるが、それを流していない機体（pirazal / pirazis）では `sh: bash: not found` で落ちた
+  # （pooza/chubo2#256）。
+  native_packages = ['bash', 'mysql80-client']
 when 'ubuntu'
   config_dir = "/etc/#{package_name}"
   rsyslog_conf = "/etc/rsyslog.d/#{package_name}.conf"
