@@ -76,11 +76,15 @@ end
 
 # Ginseng::Config は /usr/local/etc/<package>/ を直接読むため、
 # リポジトリ側の config/local.yaml シンボリックリンクは作らない方針
+# ⚠⚠ 中身に資格情報が入る（heartbeat のトークン・webhook・mysql_dump の password）ので
+# diff を伏せる。伏せないと Controller#report_result が Slack へ平文で投稿する
+# （pooza/chubo2#253 で webhook が漏れた経路）。ドリフトは「modified」の行で分かる。
 template File.join(config_dir, 'local.yaml') do
   source 'templates/local.yaml.erb'
   owner user
   group user
   mode '0644'
+  sensitive true
   variables(content: local_yaml)
 end
 
