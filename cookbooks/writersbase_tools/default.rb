@@ -134,11 +134,14 @@ if node.dig('writersbase_tools', 'rclone', 'enable')
   #   2. その diff を Controller#report_result が Slack webhook へ平文で投稿してしまう
   #      （refresh_token が丸ごと流れる）
   # remotes を差し替えるときは、このファイルを消してから流すこと。
+  # ⚠ 作り直すときも中身（client_secret / refresh_token）が diff として出て Slack へ流れるので、
+  # sensitive で diff を伏せる（pooza/chubo2#193）。
   template '/root/.config/rclone/rclone.conf' do
     source 'templates/rclone.conf.erb'
     owner 'root'
     group root_group
     mode '0600'
+    sensitive true
     variables(remotes: rclone_remotes)
     not_if 'test -f /root/.config/rclone/rclone.conf'
   end
