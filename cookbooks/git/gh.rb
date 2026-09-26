@@ -15,6 +15,8 @@ accounts.each do |account|
       owner account
       group account == 'root' ? node.dig('root', 'group') : account
       mode '0600'
+      # ⚠ 中身が GitHub の oauth_token なので diff を伏せる（Slack へ平文で流れる・pooza/chubo2#253）
+      sensitive true
       variables(user:)
     end
   else
