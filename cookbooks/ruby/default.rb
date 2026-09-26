@@ -113,8 +113,11 @@ end
 # バイトコード実行が 24-25% 遅くなる / pooza/chubo2#69）。上の not_if は
 # 「YJIT が無ければ作り直す」だけで、作り直した結果は誰も見ていないため、
 # ここで落として気づけるようにする。冪等性より検知を優先し毎回実行する。
+# ⚠ user を省くと root で走る。Ubuntu は env に RBENV_ROOT を持つので通るが、
+# FreeBSD は env が空なので root の ~/.rbenv を見て「未導入」で落ちる（pooza/chubo2#259）。
 execute "verify YJIT is built into ruby #{version}" do
   command "#{env}RBENV_VERSION=#{version} #{rbenv} exec ruby --yjit -e 'exit RubyVM::YJIT.enabled?'"
+  user deployer
 end
 
 execute "rbenv global #{global} for #{deployer}" do
