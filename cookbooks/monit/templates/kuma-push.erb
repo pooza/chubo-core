@@ -39,23 +39,29 @@ bad=$(monit summary -B 2>/dev/null \
 # （`tools/reboot-sweep.rb` が 2026-09-19 まで同じ誤りで全 FreeBSD を 20,712 日と出していた）。
 installed=$(freebsd-version -k 2>/dev/null)
 running=$(uname -r)
+# ⚠⚠ **日数は稼働日数ではなく「再起動待ちになってからの日数」**（pooza/chubo2#260・2026-09-29）。
+# 稼働日数で見ると、長く動いている機に今日カーネルが入っただけで即 DOWN になる。
+# 待ち始めは導入済みカーネル（/boot/kernel/kernel）の mtime。取れなければ稼働日数に戻す。
+# ⚠ `freebsd-update install` を 2 回すると mtime は後のほうになり、短めに出る（手で入れる運用なので許容）。
 pending=''
-up_days=0
+wait_days=0
 if [ -n "${installed}" ] && [ "${installed}" != "${running}" ]; then
-  boot=$(sysctl -n kern.boottime | sed -n 's/^{ *sec = \([0-9]*\).*/\1/p')
-  up_days=$(( ( $(date +%s) - ${boot:-0} ) / 86400 ))
-  pending="要再起動(${running}→${installed}/稼働${up_days}日)"
+  since=$(stat -f %m /boot/kernel/kernel 2>/dev/null)
+  if [ -z "${since}" ]; then
+    since=$(sysctl -n kern.boottime | sed -n 's/^{ *sec = \([0-9]*\).*/\1/p')
+  fi
+  wait_days=$(( ( $(date +%s) - ${since:-0} ) / 86400 ))
+  pending="要再起動(${running}→${installed}/待ち${wait_days}日)"
 fi
 
 # 🔴 **溜まった時点で初めて DOWN にする。**直近の 1 世代で鳴らすと、
 # 「鳴っているが対処しなくてよいもの」を作ることになり、また読まれなくなる。
 # ⚠ しきい値は `tools/reboot-sweep.rb` の A（🔴）と同じ日数に揃えてある。
-# ⚠ 稼働日数は「待っている日数」そのものではない（いつ入ったかは分からない）。
-#   reboot-sweep も同じ近似を使っているので、揃えてある。
+# ⚠ 待ち日数の測り方も reboot-sweep と揃えてある（FreeBSD はどちらもカーネルの mtime）。
 if [ -n "${bad}" ]; then
   status=down
   msg="${bad}${pending:+ ${pending}}"
-elif [ -n "${pending}" ] && [ "${up_days}" -ge <%= @reboot_stale_days %> ]; then
+elif [ -n "${pending}" ] && [ "${wait_days}" -ge <%= @reboot_stale_days %> ]; then
   status=down
   msg="${pending}"
 elif [ -n "${pending}" ]; then
