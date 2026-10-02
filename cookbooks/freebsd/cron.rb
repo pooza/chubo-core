@@ -43,7 +43,8 @@ end
 # `-J` の sleep は CMD を記録する**前**にある（`do_command.c`）ので、起動をばらせば減る。
 # ⚠ sleep は秒単位なので、同じ秒に当たった組は残る（15 なら約 7%）。
 # **cron.log を「走ったか」の根拠にしないこと**は変わらない。
-cron_flags = "-s -J #{node.dig('cron', 'root_jitter') || 15}"
+# ⚠ `-s` は書かない。/etc/rc.d/cron が `cron_dst=YES`（既定）で自分で足す（書くと 2 重になる）。
+cron_flags = "-J #{node.dig('cron', 'root_jitter') || 15}"
 execute "sysrc cron_flags='#{cron_flags}'" do
   not_if "test \"$(sysrc -n cron_flags)\" = '#{cron_flags}'"
   notifies :restart, 'service[cron]'
