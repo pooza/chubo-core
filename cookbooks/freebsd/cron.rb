@@ -34,6 +34,23 @@ template '/etc/crontab' do
   variables(minutes: minutes)
 end
 
+# ⚠⚠ **同じ瞬間に起動した root のジョブの CMD 行は、2 本目以降がカーネルで捨てられる**
+# （pooza/chubo2#247）。FreeBSD 14 の unix(4) datagram は、接続した送信者が未読のまま
+# 切断すると、受け手の「接続なしの送信者用キュー」が空のときだけ未読分を移し、
+# **空でなければ捨てる**（`uipc_usrreq.c` の `unp_disconnect`。洪水対策の仕様）。
+# cron の子は 1 行送って即 exec するので、2 つ同時に終わると 2 本目が消える。
+# 2026-10-03 の gomander で atrun の行の約 12% が欠けていた。**ジョブは走っている。**
+# `-J` の sleep は CMD を記録する**前**にある（`do_command.c`）ので、起動をばらせば減る。
+# ⚠ sleep は秒単位なので、同じ秒に当たった組は残る（15 なら約 7%）。
+# **cron.log を「走ったか」の根拠にしないこと**は変わらない。
+cron_flags = "-s -J #{node.dig('cron', 'root_jitter') || 15}"
+execute "sysrc cron_flags='#{cron_flags}'" do
+  not_if "test \"$(sysrc -n cron_flags)\" = '#{cron_flags}'"
+  notifies :restart, 'service[cron]'
+end
+
+service 'cron'
+
 template '/etc/periodic.conf' do
   source 'templates/periodic.conf.erb'
   owner 'root'
