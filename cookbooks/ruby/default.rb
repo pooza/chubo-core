@@ -16,24 +16,43 @@ global = (node.dig('ruby', 'rbenv', 'global') || version).to_s
 case node.platform
 when 'freebsd'
   # rbenv / ruby-build / ビルド依存（rust 含む）はすべて pkg で入る
-  ['rbenv', 'ruby-build', 'autoconf', 'bison', 'readline', 'openssl',
-    'libyaml', 'libffi', 'rust'].each do |pkg|
+  # ⚠ ports の openssl は入れない（下の configure_opts のコメント参照）
+  # ruby（pkg）はビルド時のベース Ruby（下の env のコメント参照）
+  ['rbenv', 'ruby-build', 'autoconf', 'bison', 'readline',
+    'libyaml', 'libffi', 'rust', 'ruby'].each do |pkg|
     package pkg
   end
 
   rbenv = 'rbenv'
-  env = ''
-  build_opts_check = nil
 
-  # pkg の openssl は OPENSSLDIR=/usr/local/openssl で、その cert.pem（CA バンドル）が
-  # 未 populate。rbenv Ruby はこの openssl にリンクするため、放置すると全 outbound TLS が
-  # `certificate verify failed (unable to get local issuer certificate)` で落ちる
-  # （本番は base openssl=/etc/ssl/cert.pem を見るので無傷＝staging 固有のギャップ）。
-  # ca_root_nss の CA バンドルへ symlink して塞ぐ。
-  package 'ca_root_nss'
-  link '/usr/local/openssl/cert.pem' do
-    to '/usr/local/share/certs/ca-root-nss.crt'
-    force true
+  # --with-openssl-dir=/usr: base の OpenSSL に固定する。指定しないと ruby-build は
+  #   `/usr/local/include/openssl` があれば ports の openssl を選ぶ。ports の openssl は
+  #   既定の版が切り替わると共有ライブラリの名前が変わり（3.0 → 3.5 で libssl.so.12 →
+  #   .so.17）、`pkg upgrade` 1 回で Ruby 本体と openssl をリンクした拡張（puma など）が
+  #   すべて LoadError で起動しなくなる（pooza/chubo2 で本番が止まった）。base の
+  #   OpenSSL は OS のメジャー版の間は名前が変わらず、修正は freebsd-update で入る。
+  #   CA バンドルも base の /etc/ssl/cert.pem を見るので、ports 版の cert.pem の手当ても要らない。
+  # ⚠ ports の openssl が入っていると、/usr を指定しても -I/-L /usr/local（libyaml 等）経由で
+  #   ports 側を掴みうる。作り直しても直らないので、ビルドの前に落として気づけるようにする。
+  # --with-baseruby: ビルド中の bundled gems の取得はベース Ruby で走り、既定では PATH の
+  #   ruby（＝rbenv の global）が使われる。それが上の理由で壊れていると net/https が読めずに
+  #   ビルドが止まる（作り直したい Ruby が、作り直しの邪魔をする）。RBENV_VERSION=system では
+  #   避けられなかった。pkg の ruby は base の OpenSSL にリンクしているので壊れない。
+  configure_opts = '--with-openssl-dir=/usr --with-baseruby=/usr/local/bin/ruby'
+  env = "RUBY_CONFIGURE_OPTS='#{configure_opts}' "
+
+  # 標準添付の openssl 拡張が base の libssl にリンクしているか。
+  # 名前の変わった ports の libssl を指している（＝起動できない）Ruby もここで作り直しになる。
+  # ⚠ 作り直しても、gem の拡張（puma / eventmachine / hiredis-client など）は古いリンクのまま。
+  #   版ごとの `gem pristine --all` と、vendor/bundle を持つアプリの入れ直しを手で流す（レシピではやらない）。
+  #   ⚠ vendor/bundle に openssl gem があると bundler 自身がそれを読んで落ちるので、
+  #   `bundle pristine` の前にその gem だけ消して `bundle install` する。
+  ruby_archdir = "RBENV_VERSION=#{version} #{rbenv} exec ruby -e 'print RbConfig::CONFIG[\"archdir\"]'"
+  build_opts_check = %(ldd "$(#{ruby_archdir})/openssl.so" | grep -q ' /usr/lib/libssl\\.')
+
+  # 既存ノードは手で移す: `pkg delete openssl` → 版ごとに `rbenv install --force` → `gem pristine --all`
+  execute 'verify ports openssl is not installed (pkg delete openssl)' do
+    command '! pkg info -e openssl'
   end
 when 'ubuntu'
   # apt に rbenv / ruby-build / rust が無いため git + rustup で用意する
