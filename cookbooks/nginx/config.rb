@@ -72,6 +72,11 @@ end
 # 未発行のときは :80 だけ出す。ACME の HTTP-01 は :80 で検証するので、この vhost が
 # 先に立っていないと certbot 側も発行できない（鶏と卵になる）。証明書が出れば
 # 次の適用で 443 が生える。発行そのものは certbot cookbook が受け持つ。
+#
+# `http_passthrough: true` を書くと、:80 を丸ごと backend へ渡すだけの vhost になる（443 も ACME も出さない）。
+# 背後の機が自分で HTTP-01 を受けて証明書を取るのを、LAN の中で試すためのもの。
+# ⚠ その名前を同じノードの `certbot.domains` に入れないこと（このノードが先に取りに行く）。
+# ⚠ 外から https では届かない（443 を持たないので、このノードの別の vhost が応答する）。
 (node.dig('nginx', 'proxies') || []).each do |proxy|
   tls = run_command("test -f #{letsencrypt_dir}/live/#{proxy['host']}/fullchain.pem", error: false)
     .exit_status.zero?

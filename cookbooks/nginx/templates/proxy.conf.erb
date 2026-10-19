@@ -4,6 +4,16 @@ server {
   server_name <%= @proxy['host'] %>;
   access_log syslog:server=127.0.0.1,tag=<%= @proxy['tag'] %>,severity=info combined;
 
+<% if @proxy['http_passthrough'] -%>
+  # 80 番を丸ごと背後へ渡す。証明書は背後の機が自分で取る（確認用のファイルも背後が返す）。
+  location / {
+    proxy_pass http://<%= @proxy['backend'] %>;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+}
+<% else -%>
   location /.well-known/acme-challenge/ {
     root <%= @docroot %>;
   }
@@ -11,7 +21,11 @@ server {
     return 301 https://$host$request_uri;
   }
 }
-<% if @tls -%>
+<% end -%>
+<% if @proxy['http_passthrough'] -%>
+
+# 443 は出さない（http_passthrough・TLS は背後の機が持つ）。
+<% elsif @tls -%>
 
 server {
   listen 443 ssl http2;
