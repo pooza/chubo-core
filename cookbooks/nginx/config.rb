@@ -77,6 +77,11 @@ end
 # 背後の機が自分で HTTP-01 を受けて証明書を取るのを、LAN の中で試すためのもの。
 # ⚠ その名前を同じノードの `certbot.domains` に入れないこと（このノードが先に取りに行く）。
 # ⚠ 外から https では届かない（443 を持たないので、このノードの別の vhost が応答する）。
+#
+# `deny_paths: [/api/badge/]` を書くと、そのパスで始まる要求を背後へ渡さず 404 を返す（443 の中継だけ）。
+# 背後のアプリに認証なしで叩ける重い入口があり、使っていないときに前段で塞ぐためのもの
+# （例: Uptime Kuma の badge API は、存在しない ID を大量に投げると応答しなくなる・GHSA-wf2j-5mc7-5c4w）。
+# ⚠ 前方一致（`location ^~`）。正規表現の location より優先されるので、背後の指定に負けない。
 (node.dig('nginx', 'proxies') || []).each do |proxy|
   tls = run_command("test -f #{letsencrypt_dir}/live/#{proxy['host']}/fullchain.pem", error: false)
     .exit_status.zero?
