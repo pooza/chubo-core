@@ -5,7 +5,9 @@ exit unless node.platform == 'ubuntu'
 # ここで apt パッケージ名に流用すると存在しない ruby<version> を叩いて死ぬ）。
 package 'ruby'
 package 'ruby-dev'
-package 'libz-dev'
+# ⚠ libz-dev は仮想パッケージ。itamae は dpkg で実体を見るので、入っていても毎回「未導入」と出る
+# （全 Ubuntu ノードで偽のドリフトになっていた・pooza/chubo2#121）。実体の名前で書く。
+package 'zlib1g-dev'
 package 'libjemalloc-dev'
 
 gem_package 'bundler'
