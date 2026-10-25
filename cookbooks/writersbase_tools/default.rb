@@ -160,6 +160,33 @@ if node.dig('writersbase_tools', 'rclone', 'enable')
   end
 end
 
+# 版をタグで宣言したときだけ、作業ツリーをそのタグへ進める（pooza/chubo2#282）。
+# 宣言しなければ git には触らない（従来どおり、版上げは手で merge してから流す）。
+#
+# ⚠⚠ git と gem の更新を 1 回の適用に収めるのが目的。手で「git を進める → 後でレシピ」と
+# 2 段に分けると、その間に periodic が走って「コードは新版・gem は旧版」で bundle check に落ちる。
+# heartbeat_down も同じ bundle を使うので down すら送れず、監視側では無通信に見える。
+# だからこの段は、後段の bundle install の直前に置く。
+#
+# - main は追わない。上流の main は次の版へ先にバンプされていることがあるので、版はタグで指定する
+# - 進められるのは前方だけ（--ff-only）。下げたいときは手で戻す
+# - Gemfile.lock は root の bundle install が PLATFORMS を書き足して汚すことがある（FreeBSD 15）。
+#   進める前にだけ捨てる。適用後にまた汚れるのは正常
+# - 持ち主のユーザーで打つ。root で打つと dubious ownership で止まる
+if (version = node.dig('writersbase_tools', 'version'))
+  git = "git -C #{path}"
+  execute "#{package_name} checkout #{version}" do
+    command [
+      "#{git} checkout -- Gemfile.lock",
+      "#{git} fetch --quiet --tags origin",
+      "#{git} merge --quiet --ff-only refs/tags/#{version}",
+    ].join(' && ')
+    user user
+    only_if "test -d #{path}/.git"
+    not_if "test \"$(#{git} describe --tags --exact-match HEAD 2>/dev/null)\" = '#{version}'"
+  end
+end
+
 # periodic (cron) スクリプト配置: writersbase-tools 側の rake install に委譲
 # FreeBSD: /usr/local/etc/periodic/{hourly,daily,weekly,monthly}/
 # Ubuntu: /etc/cron.{hourly,daily,weekly,monthly}/
