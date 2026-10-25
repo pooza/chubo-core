@@ -45,6 +45,11 @@ server {
     return 302 <%= @proxy['redirect'] %>;
   }
 <% else -%>
+<% (@proxy['deny_paths'] || []).each do |path| -%>
+  location ^~ <%= path %> {
+    return 404;
+  }
+<% end -%>
   location / {
     proxy_pass http://<%= @proxy['backend'] %>;
     proxy_set_header Host $host;
