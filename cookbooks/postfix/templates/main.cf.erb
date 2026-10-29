@@ -9,6 +9,15 @@ inet_protocols = all
 compatibility_level = 3.6
 alias_maps = hash:<%= ::File.join(node.dig('postfix', 'dir'), 'aliases') %>
 unknown_local_recipient_reject_code = 550
+<%#
+  差出人のサブドメインを親へ寄せる（root@host.example.com → root@example.com）。
+  SendGrid は From のサブドメインに親の認証済みドメインを当てず sendgrid.net で署名するので、
+  親の DMARC が reject だと受け取り拒否になる (pooza/chubo2#289)。
+  既定の masquerade_classes は envelope_recipient を含まないので、ローカル配送の宛先は変わらない。
+-%>
+<% if node.dig('postfix', 'masquerade_domains') -%>
+masquerade_domains = <%= Array(node.dig('postfix', 'masquerade_domains')).join(' ') %>
+<% end -%>
 
 # SASL
 smtp_sasl_auth_enable = yes
