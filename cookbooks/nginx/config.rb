@@ -82,6 +82,11 @@ end
 # 背後のアプリに認証なしで叩ける重い入口があり、使っていないときに前段で塞ぐためのもの
 # （例: Uptime Kuma の badge API は、存在しない ID を大量に投げると応答しなくなる・GHSA-wf2j-5mc7-5c4w）。
 # ⚠ 前方一致（`location ^~`）。正規表現の location より優先されるので、背後の指定に負けない。
+#
+# `buffering: false` を書くと、443 の中継に `proxy_buffering off;` を足す。長く開いたままの応答
+# （Mastodon の Streaming API の SSE など）を、HTTP/1.1 のクライアントへ溜めずに流すためのもの。
+# ⚠ 既定（書かない）は nginx の既定の on のまま。HTTP/2 のクライアントには on でも届くので、
+# ブラウザで試すと気づけない（pooza/chubo2#301）。
 (node.dig('nginx', 'proxies') || []).each do |proxy|
   tls = run_command("test -f #{letsencrypt_dir}/live/#{proxy['host']}/fullchain.pem", error: false)
     .exit_status.zero?
