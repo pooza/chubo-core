@@ -17,12 +17,18 @@ module Chubo
   # ⚠⚠ **流す先は $stderr。**$stdout はレシピの実行報告（Slack へ投げる本文と同じもの）
   # に使われていて、`tools/drift-sweep.rb` のように**それをパースする側がいる**。
   # 進捗を $stdout に混ぜると、同じ `INFO :` 行が生ログと報告本文とで二重に出る。
+  #
+  # ⚠⚠ **上流の `exec` の写し。**受け取りの部分だけを差し替える口が上流に無いので丸ごと写しており、
+  # 上流のその後の直し（締切での停止・`user=`・`child_env` / `spawn_env`）が届いていない。
+  # 上流に口ができたら、このクラスを消す。
   class StreamCommandLine < Ginseng::CommandLine
+    # ginseng-upstream: pooza/ginseng-core#745
     def initialize(args = [], io: $stderr)
       super(args)
       @io = io
     end
 
+    # ginseng-upstream: pooza/ginseng-core#745
     def exec(timeout: nil)
       secs = Time.elapse do
         Bundler.with_unbundled_env do
