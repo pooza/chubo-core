@@ -22,7 +22,10 @@ when 'freebsd'
   # bash は mysql_dump / postgresql_dump がパイプの失敗を拾うために使う。freebsd/deployer も
   # 入れるが、それを流していない機体（pirazal / pirazis）では `sh: bash: not found` で落ちた
   # （pooza/chubo2#256）。
-  native_packages = ['bash', 'mysql80-client']
+  # postgresql18-client は pg gem のビルドに要る（libpq と pg_config）。PostgreSQL を使わない機でも
+  # Gemfile が pg を無条件に要求する。クライアントが無い新しい機では bundle install が
+  # `Gem::Ext::BuildError`（pg-1.7.0）で落ち、periodic が 1 つも入らなかった（pooza/chubo-minc#5・dev28）。
+  native_packages = ['bash', 'mysql80-client', 'postgresql18-client']
 when 'ubuntu'
   config_dir = "/etc/#{package_name}"
   rsyslog_conf = "/etc/rsyslog.d/#{package_name}.conf"
@@ -55,6 +58,8 @@ root_group = node.dig('root', 'group')
 native_packages.each do |pkg|
   package pkg do
     not_if "pkg info -q -g 'mysql*-client'" if pkg.start_with?('mysql')
+    # ⚠ PostgreSQL も同じく、どの版のクライアントでも入っていれば足さない（サーバを持つ機の版を巻き込まない）
+    not_if "pkg info -q -g 'postgresql*-client'" if pkg.start_with?('postgresql')
   end
 end
 
