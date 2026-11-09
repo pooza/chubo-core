@@ -1,5 +1,10 @@
 exit unless node.platform == 'freebsd'
 
+# rsyslog.d / newsyslog.conf.d のグループ。既定は wheel.group（今までどおり）。
+# サイトのアカウントがこの置き場へ設定を書く利用側（chubo-minc: minc3 / kariyon の rake install）は operator などを宣言する。
+# 宣言しないと、利用側のレシピと適用のたびに書き換え合う（pooza/chubo-minc#35）。
+conf_dir_group = node.dig('logging', 'conf_dir_group') || node.dig('wheel', 'group')
+
 package 'rsyslog'
 
 execute 'sysrc syslogd_enable="NO"'
@@ -16,13 +21,13 @@ end
 
 directory '/usr/local/etc/rsyslog.d' do
   owner 'root'
-  group node.dig('wheel', 'group')
+  group conf_dir_group
   mode '0775'
 end
 
 directory '/usr/local/etc/newsyslog.conf.d' do
   owner 'root'
-  group node.dig('wheel', 'group')
+  group conf_dir_group
   mode '0775'
 end
 
