@@ -18,6 +18,13 @@ unknown_local_recipient_reject_code = 550
 <% if node.dig('postfix', 'masquerade_domains') -%>
 masquerade_domains = <%= Array(node.dig('postfix', 'masquerade_domains')).join(' ') %>
 <% end -%>
+<%#
+  中継を許す送り元。既定（mynetworks_style = host）は自分の IP だけなので、
+  同じ機の docker のコンテナや LAN の機器から送らせるときに宣言する。
+-%>
+<% if node.dig('postfix', 'mynetworks') -%>
+mynetworks = <%= Array(node.dig('postfix', 'mynetworks')).join(' ') %>
+<% end -%>
 
 # SASL
 smtp_sasl_auth_enable = yes
