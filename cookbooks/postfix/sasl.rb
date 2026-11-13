@@ -1,3 +1,7 @@
+# Ubuntu の postfix は SASL のプラグインを持たない。無いと relayhost への認証が
+# 「no mechanism available」で全部 deferred になる（libsasl2-modules-db だけでは足りない）
+package 'libsasl2-modules' if node.platform == 'ubuntu'
+
 directory File.join(node.dig('postfix', 'dir'), 'sasl') do
   owner 'root'
   group node.dig('root', 'group')
