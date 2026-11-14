@@ -1,6 +1,8 @@
+<% if @user['email'] || @user['name'] -%>
 [user]
   email = <%= @user['email'] %>
   name = <%= @user['name'] %>
+<% end -%>
 [pull]
   rebase = false
 [core]
@@ -8,3 +10,6 @@
   autocrlf = input
 [color]
   ui = true
+# 台ごとの設定（gh auth setup-git の credential helper など）。無ければ読まない
+[include]
+  path = ~/.gitconfig.local
