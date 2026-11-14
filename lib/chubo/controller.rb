@@ -172,7 +172,7 @@ module Chubo
         'itamae',
         'ssh',
         '-h', data['nodename'],
-        '-u', data.dig('node', 'ssh', 'user') || ENV.fetch('USER', nil),
+        '-u', ssh_user(data),
         '-p', data.dig('node', 'ssh', 'port') || 22,
         '--node-yaml', data['path']
       ]
@@ -181,6 +181,16 @@ module Chubo
       return StreamCommandLine.new(args) if stream?
 
       return Ginseng::CommandLine.new(args)
+    end
+
+    # 接続ユーザー: node.ssh.user → CHUBO_SSH_USER → 実行しているユーザー。
+    # ⚠ 実行ユーザーが台帳のノードに居ない端末（無人実行専用のユーザーなど）では、
+    # CHUBO_SSH_USER で wheel のユーザーを指す。無いと全ノードで Authentication failed になる
+    # （pooza/chubo2#311）。
+    def ssh_user(data)
+      return data.dig('node', 'ssh', 'user') ||
+          ENV['CHUBO_SSH_USER'].presence ||
+          ENV.fetch('USER', nil)
     end
 
     def find_recipe(recipe)
