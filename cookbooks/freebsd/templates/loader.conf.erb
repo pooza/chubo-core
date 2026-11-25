@@ -4,7 +4,10 @@ kern.geom.label.disk_ident.enable="0"
 kern.geom.label.gptid.enable="0"
 vfs.zfs.prefetch_disable="1"
 vfs.zfs.min_auto_ashift="12"
+<%# 未指定なら書かない（ARC の上限は自動）。空の値を書くと、宣言していない機に `vfs.zfs.arc_max=""` が残っていた -%>
+<% if node.dig('zfs', 'arc_max') -%>
 vfs.zfs.arc_max="<%= node.dig('zfs', 'arc_max') %>"
+<% end -%>
 <% if node.dig('zfs', 'arc_dnode_limit') -%>
 vfs.zfs.arc.dnode_limit="<%= node.dig('zfs', 'arc_dnode_limit') %>"
 <% end -%>
