@@ -1,4 +1,5 @@
-hourly_output="root"
+<%# 毎時の出力の行き先。既定は root へのメール。メールにしない機はログのパスを書く -%>
+hourly_output="<%= node.dig('cron', 'hourly_output') || 'root' %>"
 frequently_output="/var/log/frequently.log"
 security_output="/var/log/security.log"
 
