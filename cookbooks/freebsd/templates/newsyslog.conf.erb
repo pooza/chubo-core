@@ -5,6 +5,10 @@
 /var/log/messages 640 2 * @T00 ZB
 
 /var/log/frequently.log 640 2 * @T00 ZBN
+<%- hourly_output = node.dig('cron', 'hourly_output') -%>
+<%- if hourly_output.to_s.start_with?('/') -%>
+<%= hourly_output %> 640 7 * @T00 ZBN
+<%- end -%>
 /var/log/daily.log 640 7 * @T00 JZBN
 /var/log/monthly.log 640 12 * $M1D  JZBN
 /var/log/weekly.log 640 5 * $W6D0 JZBN
